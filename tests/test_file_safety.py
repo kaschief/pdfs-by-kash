@@ -64,12 +64,13 @@ class FileSafetyTests(unittest.TestCase):
         self.assertIsNone(metrics)
         self.assertEqual(self.original.read_bytes(), b"edited elsewhere")
 
-    def test_trash_failure_replaces_and_creates_no_copy(self):
+    def test_trash_failure_leaves_original_untouched_and_creates_no_copy(self):
+        # Pdfs by Kash: replacing requires the original to reach the Trash first.
         with mock.patch.object(core, "move_to_system_trash", side_effect=TrashError("unavailable")):
             status, metrics = self.run_compression()
-        self.assertNotIn("not replaced", status)
-        self.assertIsNotNone(metrics)
-        self.assertEqual(self.original.read_bytes(), self.output)
+        self.assertIn("left as is", status)
+        self.assertIsNone(metrics)
+        self.assertEqual(self.original.read_bytes(), self.payload)
         self.assertEqual(list(self.root.iterdir()), [self.original])
 
     def test_trash_moves_then_fails_still_installs_compressed_output(self):

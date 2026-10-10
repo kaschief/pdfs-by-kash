@@ -46,7 +46,7 @@ from fs_pdf_compressor.macos_login_item import (
 )
 from fs_pdf_compressor.macos_update_probe import probe_for_update
 from fs_pdf_compressor import macos_theme as theme
-from fs_pdf_compressor.macos_controls import PrimaryButton
+from fs_pdf_compressor.macos_controls import PrimaryButton, QuietButton, bring_app_forward
 from fs_pdf_compressor.macos_views import (
     ChromeView,
     DropCanvas,
@@ -238,25 +238,10 @@ class PDFCompressorController(FN.NSObject):
         self.status_label.setLineBreakMode_(AK.NSLineBreakByTruncatingTail)
         self.bottom.addSubview_(self.status_label)
 
-        self.progress = AK.NSProgressIndicator.alloc().initWithFrame_(AK.NSZeroRect)
-        self.progress.setStyle_(AK.NSProgressIndicatorStyleBar)
-        self.progress.setControlSize_(AK.NSControlSizeSmall)
-        self.progress.setIndeterminate_(False)
-        self.progress.setMinValue_(0)
-        self.progress.setMaxValue_(100)
-        self.bottom.addSubview_(self.progress)
-
-        self.clear_button = AK.NSButton.buttonWithTitle_target_action_("Clear", self, "clearList:")
-        self.clear_button.setBordered_(False)
-        self.clear_button.setFocusRingType_(AK.NSFocusRingTypeNone)
-        self.clear_button.setAttributedTitle_(
-            AK.NSAttributedString.alloc().initWithString_attributes_(
-                "Clear",
-                {
-                    AK.NSForegroundColorAttributeName: theme.INK_2,
-                    AK.NSFontAttributeName: AK.NSFont.systemFontOfSize_weight_(13, AK.NSFontWeightMedium),
-                },
-            )
+        # A real (secondary) button with a plain name; disabled, never hidden,
+        # so the footer never shifts when the list empties.
+        self.clear_button = QuietButton.alloc().initWithTitle_symbol_style_target_action_(
+            "Clear List", None, "secondary", self, "clearList:"
         )
         self.bottom.addSubview_(self.clear_button)
 
@@ -297,13 +282,10 @@ class PDFCompressorController(FN.NSObject):
         self.compress_button.setFrame_(
             AK.NSMakeRect(right - self.COMPRESS_WIDTH, control_y, self.COMPRESS_WIDTH, 28)
         )
-        right -= self.COMPRESS_WIDTH + 6
-        # Clear and the progress bar share one fixed slot, so the status text
-        # never changes width between idle and compressing.
-        slot = 120.0
-        self.clear_button.setFrame_(AK.NSMakeRect(right - 60, control_y, 60, 28))
-        self.progress.setFrame_(AK.NSMakeRect(right - slot + 6, (footer - 6) / 2, slot - 12, 6))
-        right -= slot + 4
+        right -= self.COMPRESS_WIDTH + 8
+        clear_width = 92.0
+        self.clear_button.setFrame_(AK.NSMakeRect(right - clear_width, control_y, clear_width, 28))
+        right -= clear_width + 12
         self.status_label.setFrame_(
             AK.NSMakeRect(58, (footer - 20) / 2 - 1, max(90, right - 58), 20)
         )
@@ -332,8 +314,9 @@ class PDFCompressorController(FN.NSObject):
         again = not has_ready and self.queue.has_finished
         self.compress_button.setTitle_("Compress Again" if again else "Compress")
         self.compress_button.setEnabled_(idle and (has_ready or again))
-        self.clear_button.setHidden_(not idle or len(self.queue) == 0)
-        self.progress.setHidden_(idle)
+        self.clear_button.setEnabled_(idle and len(self.queue) > 0)
+        if idle:
+            self.bottom.set_progress(None)
 
         self.results_scroll.setHidden_(not self.showing_results)
         self.table_controller.reload()
@@ -370,7 +353,8 @@ class PDFCompressorController(FN.NSObject):
             self.destination_tile.update(
                 "In place of originals", mode="off", tooltip="Not used while replacing originals"
             )
-            self.originals_tile.update("Replace", mode="warn", symbol="arrow.triangle.2.circlepath")
+            # A deliberate choice, not an error: shown plainly, no warning colour.
+            self.originals_tile.update("Replace", symbol="arrow.triangle.2.circlepath")
         self.quality_tile.update(QUALITY_CONTROL_LABELS[self.quality_index])
         if not idle:
             for tile in self.tiles:
@@ -429,7 +413,7 @@ class PDFCompressorController(FN.NSObject):
                 "Old versions go to the Trash.",
                 "arrow.triangle.2.circlepath",
                 not self.keep_originals,
-                True,
+                False,
                 self._pick(replace),
             ),
         ]
@@ -551,9 +535,12 @@ class PDFCompressorController(FN.NSObject):
         return accepted
 
     def show_main_window(self):
-        self.window.makeKeyAndOrderFront_(None)
+        if os.environ.get("PDFS_BY_KASH_BACKGROUND") == "1":
+            self.window.orderBack_(None)  # tests: exist on screen, never in front
+        else:
+            self.window.makeKeyAndOrderFront_(None)
         self.window.makeFirstResponder_(None)  # no focus ring until the user Tabs
-        AK.NSApp.activateIgnoringOtherApps_(True)
+        bring_app_forward()
 
     def chooseFiles_(self, sender):
         panel = AK.NSOpenPanel.openPanel()
@@ -597,6 +584,10 @@ class PDFCompressorController(FN.NSObject):
         self.remove_rows(self.table_controller.selected_rows())
 
     def clearSelection_(self, sender):
+        self.table_controller.table.deselectAll_(None)
+
+    def cancelOperation_(self, sender):
+        """Esc anywhere in the window deselects (the selection bar says so)."""
         self.table_controller.table.deselectAll_(None)
 
     def showInFinder_(self, sender):
@@ -671,7 +662,7 @@ class PDFCompressorController(FN.NSObject):
         self.batch_paths = self.queue.queue_ready()
         self.batch_done = 0
         self.processing = True
-        self.progress.setDoubleValue_(0)
+        self.bottom.set_progress(0.0)
         self.refresh()
 
         _, setting, _ = QUALITY_PROFILES[self.quality_index]
@@ -686,13 +677,10 @@ class PDFCompressorController(FN.NSObject):
         if prefs.skip_replace_confirmation():
             return True
         alert = AK.NSAlert.alloc().init()
-        noun = "this PDF" if count == 1 else f"{count} PDFs"
-        alert.setMessageText_(f"Replace {noun} with compressed versions?")
-        alert.setInformativeText_(
-            "Each original is only replaced after its compressed version has been "
-            "created and verified. The previous versions are moved to the Trash."
-        )
-        alert.addButtonWithTitle_("Replace Originals")
+        noun = "this PDF" if count == 1 else f"these {count} PDFs"
+        alert.setMessageText_(f"Replace {noun} with smaller versions?")
+        alert.setInformativeText_("The originals go to the Trash, so you can get them back.")
+        alert.addButtonWithTitle_("Replace")
         alert.addButtonWithTitle_("Cancel")
         alert.setShowsSuppressionButton_(True)
         alert.suppressionButton().setTitle_("Don’t ask again")
@@ -724,7 +712,7 @@ class PDFCompressorController(FN.NSObject):
         self.queue.set_state(path, state_from_result(status, metrics))
         self.batch_done += 1
         total = len(self.batch_paths)
-        self.progress.setDoubleValue_(self.batch_done / total * 100 if total else 100)
+        self.bottom.set_progress(self.batch_done / total if total else 1.0)
         if self.drop_zone is not None:
             self.drop_zone.batch_progress(self.batch_done, total)
         self.refresh()

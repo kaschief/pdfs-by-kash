@@ -26,7 +26,7 @@ from fs_pdf_compressor.compression_queue import (
     Unchanged,
 )
 from fs_pdf_compressor.core import display_folder, format_file_size
-from fs_pdf_compressor.macos_controls import is_focused, keyboard_focus_allowed
+from fs_pdf_compressor.macos_controls import QuietButton, is_focused, keyboard_focus_allowed
 
 
 class DropCanvas(AK.NSView):
@@ -112,7 +112,18 @@ class DropCanvas(AK.NSView):
 
 
 class ChromeView(AK.NSView):
-    """The lavender-tinted bottom bar with a single hairline on top."""
+    """The lavender-tinted bottom bar with a single hairline on top.
+
+    While compressing, the hairline doubles as the progress bar (an accent line
+    growing left to right), so progress takes no space and nothing reflows.
+    """
+
+    progress = None  # None when idle, else 0.0–1.0
+
+    @objc.python_method
+    def set_progress(self, value):
+        self.progress = value
+        self.setNeedsDisplay_(True)
 
     def drawRect_(self, rect):
         bounds = self.bounds()
@@ -120,6 +131,10 @@ class ChromeView(AK.NSView):
         AK.NSRectFill(bounds)
         theme.HAIRLINE.setFill()
         AK.NSRectFill(AK.NSMakeRect(0, bounds.size.height - 1, bounds.size.width, 1))
+        if self.progress is not None:
+            theme.ACCENT.setFill()
+            width = bounds.size.width * max(0.02, min(1.0, self.progress))
+            AK.NSRectFill(AK.NSMakeRect(0, bounds.size.height - 2, width, 2))
 
 
 class IconButton(AK.NSButton):
@@ -136,7 +151,17 @@ class IconButton(AK.NSButton):
         self.setAction_(action)
         self.setFocusRingType_(AK.NSFocusRingTypeNone)
         self.setAccessibilityLabel_(label)
+        self.hovered = False
+        _hover_tracking(self)
         return self
+
+    def mouseEntered_(self, event):
+        self.hovered = True
+        self.setNeedsDisplay_(True)
+
+    def mouseExited_(self, event):
+        self.hovered = False
+        self.setNeedsDisplay_(True)
 
     def acceptsFirstResponder(self):
         return keyboard_focus_allowed()
@@ -145,8 +170,8 @@ class IconButton(AK.NSButton):
         bounds = self.bounds()
         theme.CONTROL.setFill()
         theme.rounded(bounds, theme.RADIUS_CONTROL).fill()
-        if self.isHighlighted():
-            theme.HOVER.setFill()
+        if self.isHighlighted() or self.hovered:
+            theme.INK.colorWithAlphaComponent_(0.10 if self.isHighlighted() else 0.05).setFill()
             theme.rounded(bounds, theme.RADIUS_CONTROL).fill()
         theme.stroke_inside(bounds, theme.RADIUS_CONTROL, theme.CONTROL_RING, theme.HAIRLINE_WIDTH)
         _draw_tinted_symbol(self.symbol_image, bounds, theme.INK_2)
@@ -572,23 +597,27 @@ class SelectionBar(AK.NSView):
         self.layer().setShadowOffset_(AK.NSMakeSize(0, -6))
         self.label = AK.NSTextField.labelWithString_("")
         self.label.setFont_(AK.NSFont.systemFontOfSize_weight_(12.5, AK.NSFontWeightSemibold))
-        self.buttons = []
-        for title, symbol, action in (
-            ("Show in Finder", "finder", "revealSelection:"),
-            ("Remove", "trash", "removeSelection:"),
-            ("Done", None, "clearSelection:"),
-        ):
-            button = AK.NSButton.buttonWithTitle_target_action_(title, owner, action)
-            button.setBordered_(False)
-            button.setFont_(AK.NSFont.systemFontOfSize_(12.5))
-            if symbol:
-                button.setImage_(_symbol(symbol, title, 12) or _symbol("folder", title, 12))
-                button.setImagePosition_(AK.NSImageLeading)
-            self.buttons.append(button)
+        self.reveal_button = QuietButton.alloc().initWithTitle_symbol_style_target_action_(
+            "Show in Finder", "finder", "bar", owner, "revealSelection:"
+        )
+        # "from List" makes it plain that nothing is deleted from disk.
+        self.remove_button = QuietButton.alloc().initWithTitle_symbol_style_target_action_(
+            "Remove from List", "minus.circle", "bar", owner, "removeSelection:"
+        )
+        self.deselect_button = QuietButton.alloc().initWithTitle_symbol_style_target_action_(
+            None, "xmark", "bar", owner, "clearSelection:"
+        )
+        self.deselect_button.setToolTip_("Deselect (Esc)")
+        self.deselect_button.setAccessibilityLabel_("Deselect")
+        self.deselect_button.widthAnchor().constraintEqualToConstant_(28).setActive_(True)
+        self.buttons = [self.reveal_button, self.remove_button, self.deselect_button]
+        for button in self.buttons:
+            button.heightAnchor().constraintEqualToConstant_(28).setActive_(True)
         stack = AK.NSStackView.stackViewWithViews_([self.label] + self.buttons)
-        stack.setSpacing_(14)
-        stack.setCustomSpacing_afterView_(18, self.label)
-        stack.setEdgeInsets_(AK.NSEdgeInsetsMake(0, 16, 0, 14))
+        stack.setSpacing_(2)
+        stack.setCustomSpacing_afterView_(12, self.label)
+        stack.setCustomSpacing_afterView_(8, self.remove_button)
+        stack.setEdgeInsets_(AK.NSEdgeInsetsMake(0, 16, 0, 4))
         stack.setTranslatesAutoresizingMaskIntoConstraints_(False)
         self.addSubview_(stack)
         AK.NSLayoutConstraint.activateConstraints_(
@@ -610,21 +639,16 @@ class SelectionBar(AK.NSView):
         self.layer().setBackgroundColor_(theme.cg(theme.BAR, appearance))
         self.label.setTextColor_(theme.BAR_INK)
         for button in self.buttons:
-            button.setContentTintColor_(theme.BAR_INK)
-            button.setAttributedTitle_(
-                AK.NSAttributedString.alloc().initWithString_attributes_(
-                    button.title(),
-                    {AK.NSForegroundColorAttributeName: theme.BAR_INK, AK.NSFontAttributeName: button.font()},
-                )
-            )
+            button.setNeedsDisplay_(True)
 
     @objc.python_method
     def update(self, count, can_reveal, can_remove):
         self.label.setStringValue_(f"{count} selected")
-        self.buttons[0].setEnabled_(can_reveal)
-        self.buttons[1].setEnabled_(can_remove)
+        self.reveal_button.setEnabled_(can_reveal)
+        self.remove_button.setEnabled_(can_remove)
         self.setNeedsDisplay_(True)
         self.setFrameSize_(AK.NSMakeSize(self.fittingSize().width, 36))
+        self.setNeedsLayout_(True)
 
 
 # -- Queue table ---------------------------------------------------------------
@@ -842,6 +866,10 @@ class QueueTableController(FN.NSObject):
         self.table.setGridStyleMask_(AK.NSTableViewGridNone)
         self.table.setColumnAutoresizingStyle_(AK.NSTableViewFirstColumnOnlyAutoresizingStyle)
         self.table.setAccessibilityLabel_("PDF list")
+        # Fixed numeric columns (values never outgrow them); File takes the rest
+        # and grows with the window. No user resizing: nothing would gain from it.
+        self.table.setAllowsColumnResizing_(False)
+        self.table.setAllowsColumnReordering_(False)
         self.table.setHeaderView_(QueueHeaderView.alloc().initWithFrame_(AK.NSMakeRect(0, 0, 720, 30)))
         for identifier, title, width, alignment in (
             (COLUMN_FILE, "File", 300, AK.NSTextAlignmentLeft),
@@ -959,7 +987,7 @@ class QueueTableController(FN.NSObject):
             return state.reason, item.path, muted
         planned = self.controller.planned_output_for(item.path)
         if planned == item.path:
-            return "Will replace the original", item.path, theme.WARN
+            return "Will replace the original", item.path, theme.MUTED
         if os.path.dirname(planned) == os.path.dirname(item.path):
             return "Will save next to the original", planned, muted
         return f"Will save to {display_folder(planned)}", planned, muted
@@ -1067,15 +1095,15 @@ class QueueTableController(FN.NSObject):
 
     @objc.python_method
     def _icon_button(self, symbol, description, action, row):
-        button = AK.NSButton.buttonWithImage_target_action_(
-            _symbol(symbol, description, 13), self, action
+        button = QuietButton.alloc().initWithTitle_symbol_style_target_action_(
+            None, symbol, "icon", self, action
         )
-        button.setBordered_(False)
         button.setTag_(row)
         button.setToolTip_(description)
-        button.setContentTintColor_(theme.MUTED)
-        button.setFocusRingType_(AK.NSFocusRingTypeNone)
+        button.setAccessibilityLabel_(description)
         button.setTranslatesAutoresizingMaskIntoConstraints_(False)
+        button.widthAnchor().constraintEqualToConstant_(24).setActive_(True)
+        button.heightAnchor().constraintEqualToConstant_(24).setActive_(True)
         return button
 
     @objc.python_method
@@ -1085,7 +1113,7 @@ class QueueTableController(FN.NSObject):
         if row != self.table.hovered_row:
             return cell
         stack = AK.NSStackView.stackViewWithViews_([])
-        stack.setSpacing_(8)
+        stack.setSpacing_(2)
         stack.setTranslatesAutoresizingMaskIntoConstraints_(False)
         if isinstance(item.state, Compressed):
             stack.addArrangedSubview_(
@@ -1093,12 +1121,12 @@ class QueueTableController(FN.NSObject):
             )
         if self.controller.can_remove(row):
             stack.addArrangedSubview_(
-                self._icon_button("xmark.circle.fill", "Remove from list", "removeRow:", row)
+                self._icon_button("xmark", "Remove from list", "removeRow:", row)
             )
         cell.addSubview_(stack)
         AK.NSLayoutConstraint.activateConstraints_(
             [
-                stack.trailingAnchor().constraintEqualToAnchor_constant_(cell.trailingAnchor(), -12),
+                stack.trailingAnchor().constraintEqualToAnchor_constant_(cell.trailingAnchor(), -10),
                 stack.centerYAnchor().constraintEqualToAnchor_(cell.centerYAnchor()),
             ]
         )

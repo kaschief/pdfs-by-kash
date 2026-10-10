@@ -399,7 +399,8 @@ class GhostscriptCommandTests(unittest.TestCase):
             self.assertFalse(Path(f"{original}.temp.pdf").exists())
             move_to_trash.assert_called_once()
 
-    def test_compress_pdf_replaces_when_trash_fails(self):
+    def test_compress_pdf_never_replaces_when_trash_fails(self):
+        """Fork behaviour: no Trash, no replace — the original stays untouched."""
         with tempfile.TemporaryDirectory() as directory:
             original = Path(directory) / "original.pdf"
             original.write_bytes(b"original payload")
@@ -422,10 +423,10 @@ class GhostscriptCommandTests(unittest.TestCase):
             ):
                 status, metrics = compress_pdf(str(original), "/ebook", keep_original=False)
 
-            self.assertEqual(original.read_bytes(), b"%PDF-1.7\n%%EOF")
-            self.assertEqual(list(original.parent.iterdir()), [original])
-            self.assertNotIn("not replaced", status)
-            self.assertIsNotNone(metrics)
+            self.assertEqual(original.read_bytes(), b"original payload")
+            self.assertEqual(list(original.parent.iterdir()), [original], "no temp or recovery files left")
+            self.assertIn("left as is", status)
+            self.assertIsNone(metrics)
 
     def test_compress_pdf_keeps_original_when_output_is_not_smaller(self):
         with tempfile.TemporaryDirectory() as directory:

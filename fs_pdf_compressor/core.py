@@ -282,14 +282,18 @@ def _replace_and_trash_original(temp_path: str, original_path: str) -> bool:
             raise OSError("Original PDF changed while preparing replacement")
         try:
             move_to_system_trash(Path(original_path))
+        except Exception as error:
+            # Pdfs by Kash: an original is only replaced once it is safely in
+            # the Trash. If the backend failed *and* the file is still in place,
+            # stop here and leave it untouched (upstream replaced anyway, which
+            # loses the original on volumes without a Trash).
             if os.path.exists(original_path):
-                raise TrashError("The original was not moved to the system trash")
-        except Exception:
-            # Recycling is best-effort protection, not a prerequisite for the
-            # user's selected replace mode. Keep the recovery snapshot until
-            # installation succeeds, including when the trash backend moved
-            # the original before reporting an error.
-            pass
+                raise TrashError("The original could not be moved to the Trash") from error
+            # The backend moved it and then reported an error: it is in the
+            # Trash, so carrying on is safe. The recovery snapshot stays until
+            # installation succeeds.
+        if os.path.exists(original_path):
+            raise TrashError("The original was not moved to the Trash")
         try:
             os.replace(temp_path, original_path)
         except Exception:
@@ -408,5 +412,5 @@ def _compress_locked(original_path, pdf_settings, keep_original, output_dir=None
             except OSError:
                 pass
         if isinstance(error, TrashError):
-            return f"{filename} — could not recycle original; not replaced", None
+            return f"{filename} — couldn’t move the original to the Trash, so it was left as is", None
         return f"{filename} — compression failed", None

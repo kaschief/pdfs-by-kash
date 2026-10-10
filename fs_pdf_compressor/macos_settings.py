@@ -11,13 +11,21 @@ and tint; focus is a thin ring for keyboard navigation only.
 
 from __future__ import annotations
 
+import os
+
 import AppKit as AK
 import objc
 
 from fs_pdf_compressor import macos_theme as theme
 from fs_pdf_compressor import preferences as prefs
 from fs_pdf_compressor.app_icons import APP_ICONS, apply_icon, icon_image, resolve
-from fs_pdf_compressor.macos_controls import ChipControl, draw_text, is_focused, keyboard_focus_allowed
+from fs_pdf_compressor.macos_controls import (
+    ChipControl,
+    bring_app_forward,
+    draw_text,
+    is_focused,
+    keyboard_focus_allowed,
+)
 
 WIDTH = 460.0
 COLUMNS = 4
@@ -147,9 +155,12 @@ class SettingsWindowController(AK.NSObject):
     @objc.python_method
     def show(self):
         self.refresh()
-        self.window.makeKeyAndOrderFront_(None)
+        if os.environ.get("PDFS_BY_KASH_BACKGROUND") == "1":
+            self.window.orderBack_(None)
+        else:
+            self.window.makeKeyAndOrderFront_(None)
         self.window.makeFirstResponder_(None)  # no focus ring until the user Tabs
-        AK.NSApp.activateIgnoringOtherApps_(True)
+        bring_app_forward()
 
     @objc.python_method
     def _build(self):
