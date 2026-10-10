@@ -80,14 +80,14 @@ extern int NSExtensionMain(int argc, const char *argv[]);
             return;
         }
         NSURLComponents *components = [[NSURLComponents alloc] init];
-        components.scheme = @"fspdfcompressor";
+        components.scheme = @"pdfsbykash";
         components.host = @"compress";
         components.queryItems = queryItems;
         if (![NSWorkspace.sharedWorkspace openURL:components.URL]) {
             NSError *error = [NSError errorWithDomain:NSCocoaErrorDomain
                                                   code:NSFileNoSuchFileError
                                               userInfo:@{
-                NSLocalizedDescriptionKey: @"Could not open FS PDF Compressor."
+                NSLocalizedDescriptionKey: @"Could not open Pdfs by Kash."
             }];
             [context cancelRequestWithError:error];
             return;

@@ -8,7 +8,7 @@ from pathlib import Path
 
 @unittest.skipUnless(sys.platform == "darwin", "macOS AppKit test")
 class FinderQuickActionTests(unittest.TestCase):
-    def test_keep_original_choice_is_saved_on_each_toggle(self):
+    def test_originals_mode_is_saved_on_each_change(self):
         import native_app
         from unittest import mock
 
@@ -17,17 +17,22 @@ class FinderQuickActionTests(unittest.TestCase):
         controller = native_app.PDFCompressorController.alloc()
         foundation = mock.Mock()
         foundation.NSUserDefaults.standardUserDefaults.return_value = defaults
-        with mock.patch.object(native_app, "FN", foundation):
-            sender.state.return_value = native_app.AK.NSControlStateValueOn
-            controller.toggleKeepOriginal_(sender)
-            defaults.setBool_forKey_.assert_called_with(
-                True, native_app.KEEP_ORIGINAL_DEFAULTS_KEY
+        with (
+            mock.patch.object(native_app, "FN", foundation),
+            mock.patch.object(native_app.PDFCompressorController, "refresh"),
+        ):
+            sender.selectedSegment.return_value = 1
+            controller.selectOriginalsMode_(sender)
+            self.assertFalse(controller.keep_originals)
+            defaults.setObject_forKey_.assert_called_with(
+                "replace", native_app.ORIGINALS_MODE_DEFAULTS_KEY
             )
 
-            sender.state.return_value = native_app.AK.NSControlStateValueOff
-            controller.toggleKeepOriginal_(sender)
-            defaults.setBool_forKey_.assert_called_with(
-                False, native_app.KEEP_ORIGINAL_DEFAULTS_KEY
+            sender.selectedSegment.return_value = 0
+            controller.selectOriginalsMode_(sender)
+            self.assertTrue(controller.keep_originals)
+            defaults.setObject_forKey_.assert_called_with(
+                "keep", native_app.ORIGINALS_MODE_DEFAULTS_KEY
             )
 
     def test_quit_is_cancelled_while_compressing(self):
@@ -48,7 +53,7 @@ class FinderQuickActionTests(unittest.TestCase):
         delegate.controller = mock.Mock(processing=False)
         self.assertEqual(delegate.applicationShouldTerminate_(None), native_app.AK.NSTerminateNow)
 
-    def test_quick_action_open_urls_starts_only_local_files(self):
+    def test_quick_action_open_urls_queues_only_local_files(self):
         import native_app
 
         class URL:
@@ -76,7 +81,7 @@ class FinderQuickActionTests(unittest.TestCase):
             def show_main_window(self):
                 self.window_was_shown = True
 
-            def _start_paths(self, paths):
+            def add_paths(self, paths):
                 self.paths = paths
 
         delegate = native_app.AppDelegate.alloc().init()
@@ -89,7 +94,7 @@ class FinderQuickActionTests(unittest.TestCase):
         self.assertTrue(delegate.controller.window_was_shown)
         self.assertEqual(delegate.controller.paths, ["/tmp/one.pdf"])
 
-    def test_quick_action_internal_url_starts_all_encoded_paths(self):
+    def test_quick_action_internal_url_queues_all_encoded_paths(self):
         import urllib.parse
 
         import Foundation as FN
@@ -102,7 +107,7 @@ class FinderQuickActionTests(unittest.TestCase):
             def show_main_window(self):
                 pass
 
-            def _start_paths(self, paths):
+            def add_paths(self, paths):
                 self.paths = paths
 
         delegate = native_app.AppDelegate.alloc().init()
@@ -125,7 +130,7 @@ class FinderQuickActionTests(unittest.TestCase):
                 [("bookmark", value) for value in bookmarks]
             )
             url = FN.NSURL.URLWithString_(
-                f"fspdfcompressor://compress?{query}"
+                f"pdfsbykash://compress?{query}"
             )
 
             delegate.application_openURLs_(None, [url])
@@ -143,13 +148,13 @@ class FinderQuickActionTests(unittest.TestCase):
             def show_main_window(self):
                 pass
 
-            def _start_paths(self, paths):
+            def add_paths(self, paths):
                 self.paths = paths
 
         delegate = native_app.AppDelegate.alloc().init()
         delegate.controller = Controller()
         url = FN.NSURL.URLWithString_(
-            "fspdfcompressor://compress?file=%2Ftmp%2Funtrusted.pdf"
+            "pdfsbykash://compress?file=%2Ftmp%2Funtrusted.pdf"
         )
 
         delegate.application_openURLs_(None, [url])

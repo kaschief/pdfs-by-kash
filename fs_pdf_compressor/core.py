@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Copyright (C) 2026 Daniel Lares
+# Modifications Copyright (C) 2026 Kaschief
 
 """Platform-neutral PDF compression behaviour shared by every desktop UI."""
 
@@ -16,7 +17,7 @@ from fs_pdf_compressor.system_trash import TrashError, move_to_system_trash
 from fs_pdf_compressor.file_guard import FileBusyError, document_lock
 
 
-APP_NAME = "FS PDF Compressor"
+APP_NAME = "Pdfs by Kash"
 QUALITY_PROFILES = (
     (
         "Preserve quality (minimal loss)",
@@ -40,26 +41,57 @@ QUALITY_CONTROL_LABELS = ("Preserve", "Balanced", "Maximum")
 def format_file_size(byte_count: int) -> str:
     if byte_count >= 1_000_000:
         return f"{byte_count / 1_000_000:.1f} MB"
-    return f"{byte_count / 1_000:.0f} KB"
+    if byte_count >= 1_000:
+        return f"{byte_count / 1_000:.0f} KB"
+    return f"{byte_count} bytes"
+
+
+def tilde_path(path: str) -> str:
+    """Abbreviate the home directory the way Finder users read paths: ``~/Downloads``."""
+    target = Path(path)
+    try:
+        relative = target.relative_to(Path.home())
+    except ValueError:
+        return str(target)
+    return "~" if str(relative) == "." else f"~/{relative}"
 
 
 def display_folder(file_path: str) -> str:
-    """Show a file's folder the way Finder users read it, e.g. ``~/Downloads``."""
-    folder = Path(file_path).parent
-    try:
-        return str(Path("~") / folder.relative_to(Path.home()))
-    except ValueError:
-        return str(folder)
+    """The folder containing ``file_path``, home-abbreviated."""
+    return tilde_path(str(Path(file_path).parent))
 
 
-def compressed_copy_path(original_path: str) -> str:
-    path = Path(original_path)
-    candidate = path.with_name(f"{path.stem} compressed{path.suffix}")
+def _unique_path(candidate: Path, stem: str, suffix: str) -> Path:
     sequence = 2
     while candidate.exists():
-        candidate = path.with_name(f"{path.stem} compressed {sequence}{path.suffix}")
+        candidate = candidate.with_name(f"{stem} {sequence}{suffix}")
         sequence += 1
-    return str(candidate)
+    return candidate
+
+
+def compressed_copy_path(original_path: str, output_dir: str | None = None) -> str:
+    """Choose a non-clobbering destination for a kept-original compressed copy.
+
+    Next to the original the copy is named ``name compressed.pdf`` so it sorts
+    beside its source. In a separate folder the original name is kept, because
+    the folder itself already says the file is compressed.
+    """
+    path = Path(original_path)
+    folder = Path(output_dir) if output_dir else path.parent
+    if output_dir and folder.resolve() != path.parent.resolve():
+        stem = path.stem
+    else:
+        stem = f"{path.stem} compressed"
+    return str(_unique_path(folder / f"{stem}{path.suffix}", stem, path.suffix))
+
+
+def planned_output_path(
+    original_path: str, keep_original: bool, output_dir: str | None = None
+) -> str:
+    """Where compress_pdf would write right now (a preview; nothing is reserved)."""
+    if not keep_original:
+        return original_path
+    return compressed_copy_path(original_path, output_dir)
 
 
 def bundle_contents_dir() -> Path | None:
@@ -271,12 +303,21 @@ def _replace_and_trash_original(temp_path: str, original_path: str) -> bool:
             Path(backup_path).unlink(missing_ok=True)
 
 
-def compress_pdf(original_path: str, pdf_settings: str, keep_original: bool):
-    """Compress one PDF, preserving the original if no smaller result exists."""
+def compress_pdf(
+    original_path: str,
+    pdf_settings: str,
+    keep_original: bool,
+    output_dir: str | None = None,
+):
+    """Compress one PDF, preserving the original if no smaller result exists.
+
+    ``output_dir`` only applies when keeping originals; replacing always
+    writes back to the original's own path.
+    """
     original_path = str(Path(original_path).resolve())
     try:
         with document_lock(original_path):
-            return _compress_locked(original_path, pdf_settings, keep_original)
+            return _compress_locked(original_path, pdf_settings, keep_original, output_dir)
     except FileBusyError:
         return f"{Path(original_path).name} — already being compressed", None
     except OSError:
@@ -294,7 +335,7 @@ def _valid_pdf_output(path):
         return b"%%EOF" in output.read()
 
 
-def _compress_locked(original_path, pdf_settings, keep_original):
+def _compress_locked(original_path, pdf_settings, keep_original, output_dir=None):
     filename = os.path.basename(original_path)
     temp_path = None
     try:
@@ -335,7 +376,9 @@ def _compress_locked(original_path, pdf_settings, keep_original):
             raise OSError("Original PDF changed during compression")
         shutil.copystat(original_path, temp_path)
         if keep_original:
-            output_path = compressed_copy_path(original_path)
+            if output_dir:
+                Path(output_dir).mkdir(parents=True, exist_ok=True)
+            output_path = compressed_copy_path(original_path, output_dir)
             output = open(output_path, "xb")
             try:
                 with output, open(temp_path, "rb") as source:

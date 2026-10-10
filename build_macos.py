@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Copyright (C) 2026 Daniel Lares
 
-"""Build an Apple Silicon FS PDF Compressor.app with embedded Ghostscript.
+"""Build an Apple Silicon Pdfs by Kash.app with embedded Ghostscript.
 
 Run with the project's build virtual environment:
     MACOS_SIGNING_IDENTITY="Developer ID Application: ..." \
@@ -33,18 +33,18 @@ ROOT = Path(__file__).resolve().parent
 # A test build must never replace an artifact already submitted to Apple.
 # Set DIST_DIR for a separate local build directory (for example, release-test).
 DIST = Path(os.environ.get("DIST_DIR", str(ROOT / "release")))
-APP_NAME = "FS PDF Compressor"
+APP_NAME = "Pdfs by Kash"
 from fs_pdf_compressor.version import APP_VERSION
 APP_DISPLAY_NAME = os.environ.get("MACOS_DISPLAY_NAME", APP_NAME)
 APP_BUNDLE_IDENTIFIER = os.environ.get(
-    "MACOS_BUNDLE_IDENTIFIER", "com.daniellares.fspdfcompressor"
+    "MACOS_BUNDLE_IDENTIFIER", "com.kaschief.pdfsbykash"
 )
 APP = DIST / f"{APP_NAME}.app"
-QUICK_ACTION_NAME = "Compress with FS PDF Compressor"
+QUICK_ACTION_NAME = "Add to Pdfs by Kash"
 QUICK_ACTION = APP / "Contents" / "PlugIns" / f"{QUICK_ACTION_NAME}.appex"
 QUICK_ACTION_SOURCE = ROOT / "macos_quick_action" / "ActionRequestHandler.m"
 QUICK_ACTION_ENTITLEMENTS = ROOT / "macos_quick_action" / "QuickAction.entitlements"
-DMG_NAME = f"FS-PDF-Compressor-{APP_VERSION}-arm64.dmg"
+DMG_NAME = f"Pdfs-by-Kash-{APP_VERSION}-arm64.dmg"
 GHOSTSCRIPT_PREFIX = Path(
     os.environ.get("GHOSTSCRIPT_ROOT", "/opt/homebrew/opt/ghostscript")
 ).resolve()
@@ -53,7 +53,7 @@ GHOSTSCRIPT_VERSION = "10.07.1"
 COMPATIBILITY_GHOSTSCRIPT_APP = os.environ.get("MACOS_GHOSTSCRIPT_SOURCE_APP")
 SIGNING_IDENTITY = os.environ.get("MACOS_SIGNING_IDENTITY", "-")
 SIGNING_KEYCHAIN = os.environ.get("MACOS_SIGNING_KEYCHAIN")
-REPOSITORY_URL = "https://github.com/gitlares/fs-pdf-compressor"
+REPOSITORY_URL = "https://github.com/kaschief/pdfs-by-kash"
 SPARKLE_VERSION = "2.9.4"
 SPARKLE_ARCHIVE_URL = (
     "https://github.com/sparkle-project/Sparkle/releases/download/"
@@ -61,7 +61,9 @@ SPARKLE_ARCHIVE_URL = (
 )
 SPARKLE_ARCHIVE_SHA256 = "ce89daf967db1e1893ed3ebd67575ed82d3902563e3191ca92aaec9164fbdef9"
 SPARKLE_CACHE = Path.home() / "Library" / "Caches" / APP_NAME / f"Sparkle-{SPARKLE_VERSION}"
-SPARKLE_FEED_URL = "https://gitlares.github.io/fs-pdf-compressor/appcast.xml"
+# This fork has no update feed. Pointing at upstream's appcast would let Sparkle
+# replace Pdfs by Kash with an upstream FS PDF Compressor build.
+SPARKLE_FEED_URL = os.environ.get("SPARKLE_FEED_URL") or None
 MINIMUM_SYSTEM_VERSION = os.environ.get("MACOS_MINIMUM_VERSION", "26.0")
 BUILD_STAGE = os.environ.get("FS_COMPRESSOR_BUILD_STAGE", "release")
 SOURCE_APP = os.environ.get("FS_COMPRESSOR_SOURCE_APP")
@@ -482,7 +484,7 @@ def write_compliance_manifest(python_runtime: dict[str, str]) -> None:
     )
     (resources / "SOURCE_OFFER.md").write_text(
         "# Corresponding source\n\n"
-        f"This FS PDF Compressor {APP_VERSION} distribution corresponds to source ref "
+        f"This Pdfs by Kash {APP_VERSION} distribution (a modified FS PDF Compressor) corresponds to source ref "
         f"`{source_ref}` in:\n\n{REPOSITORY_URL}/tree/{source_ref}\n\n"
         "The bundled component and Ghostscript dependency versions, licenses, and upstream source URLs are "
         "listed in `THIRD_PARTY_MANIFEST.json`. The application source and build script "
@@ -506,12 +508,12 @@ def write_info_plist(update_public_key: str | None) -> None:
             "CFBundleURLTypes": [
                 {
                     "CFBundleURLName": f"{APP_BUNDLE_IDENTIFIER}.quick-action",
-                    "CFBundleURLSchemes": ["fspdfcompressor"],
+                    "CFBundleURLSchemes": ["pdfsbykash"],
                 }
             ],
         }
     )
-    if update_public_key is None:
+    if update_public_key is None or SPARKLE_FEED_URL is None:
         for key in (
             "SUFeedURL",
             "SUPublicEDKey",

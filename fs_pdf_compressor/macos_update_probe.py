@@ -66,7 +66,7 @@ def probe_for_update(
     parsed_url = urlparse(feed_url)
     if parsed_url.scheme != "https":
         return None
-    request = Request(feed_url, headers={"User-Agent": "FS PDF Compressor"})
+    request = Request(feed_url, headers={"User-Agent": "Pdfs by Kash"})
     try:
         with urlopen(request, timeout=timeout) as response:
             appcast = response.read(MAX_APPCAST_BYTES + 1)

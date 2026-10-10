@@ -1,7 +1,8 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Copyright (C) 2026 Daniel Lares
+# Modifications Copyright (C) 2026 Kaschief
 
-"""Native macOS Drop Zone for quick PDF compression."""
+"""Native macOS Drop Zone that queues PDFs in the main window."""
 
 from __future__ import annotations
 
@@ -19,7 +20,7 @@ except ImportError:  # Development environments may omit the Quartz bindings.
 
 PANEL_WIDTH = 96.0
 PANEL_HEIGHT = 96.0
-PANEL_AUTOSAVE_NAME = "FS PDF Compressor Drop Zone v1"
+PANEL_AUTOSAVE_NAME = "Pdfs by Kash Drop Zone v1"
 
 
 def _desktop_window_level() -> int:
@@ -42,7 +43,7 @@ class DropZoneView(AK.NSView):
         self.result_text = ""
         self.hole_image = self._load_hole_image()
         self.registerForDraggedTypes_([AK.NSPasteboardTypeFileURL])
-        self.setAccessibilityLabel_("Drop Zone for PDF compression")
+        self.setAccessibilityLabel_("Drop Zone: add PDFs to the compression queue")
         return self
 
     def isOpaque(self):
@@ -257,14 +258,9 @@ class DropZonePanel(AK.NSPanel):
         self.setFrameOrigin_(origin)
 
     def start_paths(self, paths):
-        if self.controller.processing:
-            self._show_temporary_result("Busy")
-            return False
+        # Dropping only queues files; compression starts from the main window.
         accepted = self.controller.start_drop_zone_paths(paths)
-        if accepted:
-            self.view.set_processing()
-        else:
-            self._show_temporary_result("PDF only")
+        self._show_temporary_result("Queued" if accepted else "PDF only")
         return accepted
 
     def open_main_window(self):

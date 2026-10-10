@@ -1,3 +1,29 @@
+# Pdfs by Kash
+
+A personal macOS fork of [FS PDF Compressor](https://github.com/gitlares/fs-pdf-compressor)
+by Daniel Lares, licensed under the GNU AGPL v3 (see [LICENSE](LICENSE)).
+
+**What's different from upstream (macOS app):**
+
+- **Queue, review, then compress.** Adding files (window, + button, Drop Zone, Finder
+  Quick Action) only queues them. Nothing compresses until you click **Compress**.
+- **Sizes up front.** Each row shows Original → Compressed → Reduction, with a status
+  icon (pending, compressing, compressed, unchanged, failed).
+- **Visible destination.** "Save to" shows where files go: next to each original
+  (`name compressed.pdf`) or a folder you choose. Hover any row for the full path;
+  click the magnifier (or double-click) to reveal the file in Finder.
+- **Explicit originals.** Keep (default) or Replace. Replace only overwrites after the
+  compressed file is created and verified; the old version goes to the Trash.
+- Upstream's Sparkle auto-update feed is disabled so the fork is never replaced by
+  an upstream build.
+
+Run from source: `brew install python@3.12 ghostscript`, then
+`python3.12 -m venv .build-venv && .build-venv/bin/pip install -r requirements-build.txt && .build-venv/bin/python native_app.py`.
+
+The original project README follows.
+
+---
+
 <p align="center">
   <img src="assets/PDFCompresor.png" width="160" alt="FS PDF Compressor icon">
 </p>

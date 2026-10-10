@@ -12,11 +12,11 @@ import build_macos
 class MacOSInfoPlistTests(unittest.TestCase):
     def test_write_info_plist_does_not_register_as_a_pdf_handler(self):
         with tempfile.TemporaryDirectory() as directory:
-            app = Path(directory) / "FS PDF Compressor.app"
+            app = Path(directory) / "Pdfs by Kash.app"
             info_plist = app / "Contents" / "Info.plist"
             info_plist.parent.mkdir(parents=True)
             with info_plist.open("wb") as file:
-                plistlib.dump({"CFBundleName": "FS PDF Compressor"}, file)
+                plistlib.dump({"CFBundleName": "Pdfs by Kash"}, file)
 
             with patch.object(build_macos, "APP", app):
                 build_macos.write_info_plist(None)
@@ -28,17 +28,17 @@ class MacOSInfoPlistTests(unittest.TestCase):
             self.assertNotIn("NSServices", info)
             self.assertEqual(
                 info["CFBundleURLTypes"][0]["CFBundleURLSchemes"],
-                ["fspdfcompressor"],
+                ["pdfsbykash"],
             )
 
     def test_bundle_quick_action_targets_pdf_files_in_finder(self):
         with tempfile.TemporaryDirectory() as directory:
-            app = Path(directory) / "FS PDF Compressor.app"
+            app = Path(directory) / "Pdfs by Kash.app"
             quick_action = (
                 app
                 / "Contents"
                 / "PlugIns"
-                / "Compress with FS PDF Compressor.appex"
+                / "Compress with Pdfs by Kash.appex"
             )
 
             with (
@@ -59,7 +59,7 @@ class MacOSInfoPlistTests(unittest.TestCase):
             )
             self.assertEqual(
                 attributes["NSExtensionServiceFinderPreviewLabel"],
-                "Compress with FS PDF Compressor",
+                "Add to Pdfs by Kash",
             )
             self.assertIn("com.adobe.pdf", attributes["NSExtensionActivationRule"])
             self.assertIn("clang", run.call_args.args)
