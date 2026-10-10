@@ -144,8 +144,16 @@ python3.12 -m venv .build-venv
 .build-venv/bin/python native_app.py
 ```
 
-Build the signed `.app` (ad hoc), DMG and zip into `release-test/`. The build pins
-Ghostscript 10.07.1; if Homebrew has a newer one, point it at an app that bundles 10.07.1:
+Day to day:
+
+```bash
+scripts/dev.sh                 # run (or restart) the app from source
+scripts/install_local_mac.sh   # tests → signed build → quit installed app → replace → reopen
+```
+
+The build pins Ghostscript 10.07.1 (10.08.0 has a `pdfwrite` regression, see the changelog);
+the install script takes it from `/Applications/FS PDF Compressor.app` when Homebrew's is newer.
+To build only, into `release-test/`:
 
 ```bash
 DIST_DIR=release-test MACOS_GHOSTSCRIPT_SOURCE_APP="/Applications/FS PDF Compressor.app" .build-venv/bin/python build_macos.py
@@ -176,6 +184,7 @@ Tests and screenshots:
 | `fs_pdf_compressor/compression_queue.py` | The list's model: one state per file |
 | `macos_dock_tile/` | Dock tile plug-in that shows the chosen icon while the app is closed |
 | `scripts/render_docs_screenshots.py` | Regenerates `docs/screenshots/` |
+| `scripts/dev.sh`, `scripts/install_local_mac.sh` | Dev run; rebuild + install + reopen |
 
 ### Design history
 

@@ -8,8 +8,14 @@ is the contract for anyone — human or agent — changing it.
 - **Home branch is `pdfs-home`.** Commit there; push to `origin` only. `upstream`
   (gitlares/fs-pdf-compressor) is fetch-only. Branch worktrees live in `.worktrees/` (ignored),
   never as sibling folders.
-- **Never steal the user's focus.** Any automated UI run sets `PDFS_BY_KASH_BACKGROUND=1`
-  (windows render off-screen; the app never activates). Don't `open` the built app unless asked.
+- **Run the dev app after every change.** Once the gate is green, `scripts/dev.sh` starts the app
+  from source (restarting it if it's already running) so the owner can see the change.
+- **Never touch the installed app** (`/Applications/Pdfs by Kash.app`) until the owner asks for a
+  rebuild/install. Then run `scripts/install_local_mac.sh`: tests → signed build → quits the
+  installed app if open (stops if a batch is still compressing) → replaces it → reopens it. Never
+  copy a bundle by hand.
+- **Automated checks never steal focus.** Any scripted UI run sets `PDFS_BY_KASH_BACKGROUND=1`
+  (windows render off-screen; the app never activates).
 - **The gate is green before you call something done:**
 
   ```bash
@@ -63,3 +69,6 @@ A user-visible change is not finished until:
 | `fs_pdf_compressor/preferences.py` | Saved preferences |
 | `assets/app-icons/`, `assets/AppIcon.icns` | The eight icons; Squish bundle icon |
 | `docs/design/`, `docs/icon-studies/` | Approved mockups and icon studies |
+| `scripts/dev.sh` | Run/restart the dev app from source |
+| `scripts/install_local_mac.sh` | Owner-approved rebuild + install into /Applications, then reopen |
+| `scripts/render_docs_screenshots.py` | Regenerate `docs/screenshots/` off-screen |

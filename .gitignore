@@ -36,3 +36,5 @@ PRIVATE_RELEASE_NOTES.md
 
 # Branch worktrees (icon and design explorations) live inside the repo
 .worktrees/
+.dev.log
+.build.log
