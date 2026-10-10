@@ -34,7 +34,10 @@ from fs_pdf_compressor.core import (
     planned_output_path,
     tilde_path,
 )
+from fs_pdf_compressor import preferences as prefs
+from fs_pdf_compressor.app_icons import apply_icon
 from fs_pdf_compressor.macos_drop_zone import DropZonePanel
+from fs_pdf_compressor.macos_settings import SettingsWindowController, apply_theme
 from fs_pdf_compressor.macos_login_item import (
     current_state as login_item_state,
     open_login_items_settings,
@@ -49,11 +52,6 @@ UPSTREAM_URL = "https://github.com/gitlares/fs-pdf-compressor"
 REPOSITORY_URL = "https://github.com/kaschief/pdfs-by-kash"
 URL_SCHEME = "pdfsbykash"
 DROP_ZONE_DEFAULTS_KEY = "DropZoneEnabled"
-ORIGINALS_MODE_DEFAULTS_KEY = "OriginalsMode"
-QUALITY_DEFAULTS_KEY = "QualityIndex"
-OUTPUT_FOLDER_DEFAULTS_KEY = "OutputFolder"
-USE_OUTPUT_FOLDER_DEFAULTS_KEY = "UseOutputFolder"
-SKIP_REPLACE_CONFIRMATION_DEFAULTS_KEY = "SkipReplaceConfirmation"
 SPARKLE_PROBE_LAST_CHECK_KEY = "SparkleLightweightProbeLastCheck"
 SPARKLE_PROBE_INTERVAL = 86_400.0
 SPARKLE_PROBE_TIMEOUT = 5.0
@@ -92,32 +90,32 @@ class PDFCompressorController(FN.NSObject):
         self = objc.super(PDFCompressorController, self).init()
         if self is None:
             return None
-        defaults = FN.NSUserDefaults.standardUserDefaults()
-        defaults.registerDefaults_(
-            {
-                ORIGINALS_MODE_DEFAULTS_KEY: "keep",
-                QUALITY_DEFAULTS_KEY: 1,
-                OUTPUT_FOLDER_DEFAULTS_KEY: "",
-                USE_OUTPUT_FOLDER_DEFAULTS_KEY: False,
-            }
-        )
         self.queue = CompressionQueue()
         self.batch_paths = []
         self.batch_done = 0
         self.processing = False
         self.drop_zone = None
-        self.quality_index = max(
-            0, min(len(QUALITY_PROFILES) - 1, defaults.integerForKey_(QUALITY_DEFAULTS_KEY))
-        )
-        self.keep_originals = defaults.stringForKey_(ORIGINALS_MODE_DEFAULTS_KEY) != "replace"
-        folder = defaults.stringForKey_(OUTPUT_FOLDER_DEFAULTS_KEY) or ""
-        self.output_folder = str(folder) if folder else None
-        self.use_output_folder = bool(
-            self.output_folder and defaults.boolForKey_(USE_OUTPUT_FOLDER_DEFAULTS_KEY)
-        )
+        self.apply_saved_defaults()
         self._build_window()
         self.refresh()
         return self
+
+    @objc.python_method
+    def apply_saved_defaults(self):
+        """Start from the Settings defaults; later changes here are session-only."""
+        saved = prefs.compression_defaults()
+        self.quality_index = saved.quality_index
+        self.keep_originals = saved.keep_originals
+        self.output_folder = saved.output_folder
+        self.use_output_folder = saved.use_output_folder
+        self.reveal_when_done = saved.reveal_when_done
+
+    @objc.python_method
+    def settings_changed(self):
+        if self.processing:
+            return
+        self.apply_saved_defaults()
+        self.refresh()
 
     # -- Derived state ---------------------------------------------------------------
 
@@ -548,23 +546,14 @@ class PDFCompressorController(FN.NSObject):
                 self.use_output_folder = True
         else:
             self.use_output_folder = tag == TAG_FOLDER
-        defaults = FN.NSUserDefaults.standardUserDefaults()
-        defaults.setObject_forKey_(self.output_folder or "", OUTPUT_FOLDER_DEFAULTS_KEY)
-        defaults.setBool_forKey_(self.use_output_folder, USE_OUTPUT_FOLDER_DEFAULTS_KEY)
         self.refresh()
 
     def selectOriginalsMode_(self, sender):
         self.keep_originals = sender.selectedSegment() == 0
-        FN.NSUserDefaults.standardUserDefaults().setObject_forKey_(
-            "keep" if self.keep_originals else "replace", ORIGINALS_MODE_DEFAULTS_KEY
-        )
         self.refresh()
 
     def selectQuality_(self, sender):
         self.quality_index = sender.selectedItem().tag()
-        FN.NSUserDefaults.standardUserDefaults().setInteger_forKey_(
-            self.quality_index, QUALITY_DEFAULTS_KEY
-        )
 
     # -- Compressing ---------------------------------------------------------------------
 
@@ -594,8 +583,7 @@ class PDFCompressorController(FN.NSObject):
 
     @objc.python_method
     def _confirm_replace(self, count):
-        defaults = FN.NSUserDefaults.standardUserDefaults()
-        if defaults.boolForKey_(SKIP_REPLACE_CONFIRMATION_DEFAULTS_KEY):
+        if prefs.skip_replace_confirmation():
             return True
         alert = AK.NSAlert.alloc().init()
         noun = "PDF" if count == 1 else f"{count} PDFs"
@@ -610,7 +598,7 @@ class PDFCompressorController(FN.NSObject):
         alert.suppressionButton().setTitle_("Don’t ask again")
         response = alert.runModal()
         if alert.suppressionButton().state() == AK.NSControlStateValueOn:
-            defaults.setBool_forKey_(True, SKIP_REPLACE_CONFIRMATION_DEFAULTS_KEY)
+            prefs.set_skip_replace_confirmation(True)
         return response == AK.NSAlertFirstButtonReturn
 
     @objc.python_method
@@ -660,6 +648,16 @@ class PDFCompressorController(FN.NSObject):
         ]
         self.batch_paths = []
         self.refresh()
+        if self.reveal_when_done:
+            outputs = [
+                item.state.output_path
+                for item in self.queue.items
+                if item.path in batch and isinstance(item.state, Compressed)
+            ]
+            if outputs:
+                AK.NSWorkspace.sharedWorkspace().activateFileViewerSelectingURLs_(
+                    [FN.NSURL.fileURLWithPath_(path) for path in outputs]
+                )
         if self.drop_zone is not None:
             self.drop_zone.batch_finished(BatchSummary.from_metrics(metrics))
 
@@ -678,6 +676,9 @@ class AppDelegate(FN.NSObject):
 
     def applicationDidFinishLaunching_(self, notification):
         self.drop_zone_panel = None
+        self.settings_controller = None
+        apply_theme(prefs.theme())
+        apply_icon(prefs.app_icon())
         self._build_main_menu()
         self.controller = PDFCompressorController.alloc().init()
         if FN.NSUserDefaults.standardUserDefaults().boolForKey_(
@@ -805,6 +806,11 @@ class AppDelegate(FN.NSObject):
         )
         about_item.setTarget_(self)
         application_menu.addItem_(about_item)
+        application_menu.addItem_(AK.NSMenuItem.separatorItem())
+        settings_item = application_menu.addItemWithTitle_action_keyEquivalent_(
+            "Settings…", "showSettings:", ","
+        )
+        settings_item.setTarget_(self)
 
         application_menu.addItem_(AK.NSMenuItem.separatorItem())
 
@@ -869,6 +875,18 @@ class AppDelegate(FN.NSObject):
         edit_menu.addItemWithTitle_action_keyEquivalent_("Select All", "selectAll:", "a")
         edit_item.setSubmenu_(edit_menu)
         AK.NSApp.setMainMenu_(main_menu)
+
+    def showSettings_(self, sender):
+        if self.settings_controller is None:
+            self.settings_controller = SettingsWindowController.alloc().initWithOnChange_(
+                self._settings_changed
+            )
+        self.settings_controller.show()
+
+    @objc.python_method
+    def _settings_changed(self, kind):
+        if kind == "compression" and self.controller is not None:
+            self.controller.settings_changed()
 
     def showAbout_(self, sender):
         text = (

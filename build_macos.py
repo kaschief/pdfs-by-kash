@@ -44,6 +44,11 @@ QUICK_ACTION_NAME = "Add to Pdfs by Kash"
 QUICK_ACTION = APP / "Contents" / "PlugIns" / f"{QUICK_ACTION_NAME}.appex"
 QUICK_ACTION_SOURCE = ROOT / "macos_quick_action" / "ActionRequestHandler.m"
 QUICK_ACTION_ENTITLEMENTS = ROOT / "macos_quick_action" / "QuickAction.entitlements"
+DOCK_TILE_NAME = "Pdfs by Kash Dock Tile"
+DOCK_TILE = APP / "Contents" / "PlugIns" / f"{DOCK_TILE_NAME}.docktileplugin"
+DOCK_TILE_SOURCE = ROOT / "macos_dock_tile" / "DockTilePlugIn.m"
+APP_ICON = ROOT / "assets" / "AppIcon.icns"  # Squish, the default icon
+APP_ICON_CHOICES = ROOT / "assets" / "app-icons"  # all eight approved icons
 DMG_NAME = f"Pdfs-by-Kash-{APP_VERSION}-arm64.dmg"
 GHOSTSCRIPT_PREFIX = Path(
     os.environ.get("GHOSTSCRIPT_ROOT", "/opt/homebrew/opt/ghostscript")
@@ -504,6 +509,7 @@ def write_info_plist(update_public_key: str | None) -> None:
             "CFBundleVersion": APP_VERSION,
             "NSHumanReadableCopyright": "© 2026 Daniel Lares",
             "LSApplicationCategoryType": "public.app-category.utilities",
+            "NSDockTilePlugIn": f"{DOCK_TILE_NAME}.docktileplugin",
             "LSMinimumSystemVersion": MINIMUM_SYSTEM_VERSION,
             "CFBundleURLTypes": [
                 {
@@ -596,10 +602,56 @@ def bundle_quick_action() -> None:
     with (QUICK_ACTION / "Contents" / "Info.plist").open("wb") as file:
         plistlib.dump(info, file)
     shutil.copy2(
-        ROOT / "assets" / "PDFCompresor.icns",
-        resources / "PDFCompresor.icns",
+        APP_ICON,
+        resources / "AppIcon.icns",
     )
     sign(QUICK_ACTION, entitlements=QUICK_ACTION_ENTITLEMENTS)
+
+
+def bundle_app_icon_choices() -> None:
+    """Ship every approved icon so Settings can switch between them offline."""
+    destination = APP / "Contents" / "Resources" / "AppIcons"
+    destination.mkdir(parents=True, exist_ok=True)
+    for png in sorted(APP_ICON_CHOICES.glob("*.png")):
+        shutil.copy2(png, destination / png.name)
+
+
+def bundle_dock_tile() -> None:
+    """Build the NSDockTilePlugIn that shows the chosen icon while the app is closed."""
+    executable = DOCK_TILE / "Contents" / "MacOS" / DOCK_TILE_NAME
+    executable.parent.mkdir(parents=True, exist_ok=True)
+    run(
+        "xcrun",
+        "--sdk",
+        "macosx",
+        "clang",
+        "-bundle",
+        "-arch",
+        "arm64",
+        "-fobjc-arc",
+        f"-mmacosx-version-min={MINIMUM_SYSTEM_VERSION}",
+        "-framework",
+        "AppKit",
+        "-framework",
+        "Foundation",
+        str(DOCK_TILE_SOURCE),
+        "-o",
+        str(executable),
+    )
+    info = {
+        "CFBundleDevelopmentRegion": "en",
+        "CFBundleExecutable": DOCK_TILE_NAME,
+        "CFBundleIdentifier": f"{APP_BUNDLE_IDENTIFIER}.dock-tile",
+        "CFBundleInfoDictionaryVersion": "6.0",
+        "CFBundleName": DOCK_TILE_NAME,
+        "CFBundlePackageType": "BNDL",
+        "CFBundleShortVersionString": APP_VERSION,
+        "CFBundleVersion": APP_VERSION,
+        "NSPrincipalClass": "PdfsByKashDockTilePlugIn",
+    }
+    with (DOCK_TILE / "Contents" / "Info.plist").open("wb") as file:
+        plistlib.dump(info, file)
+    sign(DOCK_TILE)
 
 
 def prepare_output_directory() -> None:
@@ -618,7 +670,7 @@ def build_base_application() -> None:
         "--name",
         APP_NAME,
         "--icon",
-        str(ROOT / "assets" / "PDFCompresor.icns"),
+        str(APP_ICON),
         "--target-arch",
         "arm64",
         "--distpath",
@@ -648,7 +700,9 @@ def build_base_application() -> None:
     )
     shutil.copy2(ROOT / "THIRD_PARTY_NOTICES.md", APP / "Contents" / "Resources")
     sign_ghostscript_components()
+    bundle_app_icon_choices()
     bundle_quick_action()
+    bundle_dock_tile()
     sign(APP)
     run("codesign", "--verify", "--deep", "--strict", "--verbose=2", str(APP))
 
@@ -675,7 +729,11 @@ def sign_embedded_macho_components() -> None:
         # Sparkle contains nested XPC bundles with their own entitlements.
         # They must be sealed as bundles by sign_sparkle_framework(), not as
         # individual Mach-O files in this generic pass.
-        if "Sparkle.framework" in candidate.parts or QUICK_ACTION.name in candidate.parts:
+        if (
+            "Sparkle.framework" in candidate.parts
+            or QUICK_ACTION.name in candidate.parts
+            or DOCK_TILE.name in candidate.parts
+        ):
             continue
         resolved = candidate.resolve()
         if resolved in seen:
@@ -700,6 +758,7 @@ def finalize_application() -> None:
     sign_embedded_macho_components()
     sign_ghostscript_components()
     sign(QUICK_ACTION, entitlements=QUICK_ACTION_ENTITLEMENTS)
+    sign(DOCK_TILE)
     if sparkle_framework is not None:
         sign_sparkle_framework(sparkle_framework)
     sign(APP)

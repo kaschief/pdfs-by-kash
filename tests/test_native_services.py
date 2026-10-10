@@ -8,32 +8,23 @@ from pathlib import Path
 
 @unittest.skipUnless(sys.platform == "darwin", "macOS AppKit test")
 class FinderQuickActionTests(unittest.TestCase):
-    def test_originals_mode_is_saved_on_each_change(self):
+    def test_originals_mode_in_main_window_is_session_only(self):
         import native_app
         from unittest import mock
 
-        defaults = mock.Mock()
         sender = mock.Mock()
         controller = native_app.PDFCompressorController.alloc()
-        foundation = mock.Mock()
-        foundation.NSUserDefaults.standardUserDefaults.return_value = defaults
         with (
-            mock.patch.object(native_app, "FN", foundation),
             mock.patch.object(native_app.PDFCompressorController, "refresh"),
+            mock.patch.object(native_app.prefs, "save_compression_defaults") as save,
         ):
             sender.selectedSegment.return_value = 1
             controller.selectOriginalsMode_(sender)
             self.assertFalse(controller.keep_originals)
-            defaults.setObject_forKey_.assert_called_with(
-                "replace", native_app.ORIGINALS_MODE_DEFAULTS_KEY
-            )
-
             sender.selectedSegment.return_value = 0
             controller.selectOriginalsMode_(sender)
             self.assertTrue(controller.keep_originals)
-            defaults.setObject_forKey_.assert_called_with(
-                "keep", native_app.ORIGINALS_MODE_DEFAULTS_KEY
-            )
+            save.assert_not_called()
 
     def test_quit_is_cancelled_while_compressing(self):
         import native_app
