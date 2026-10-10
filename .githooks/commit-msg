@@ -1,0 +1,27 @@
+#!/usr/bin/env sh
+# Enforces Conventional Commits without needing Node: type(optional-scope)!: summary
+# This repo has no package.json, so commitlint is not available here.
+
+subject="$(sed -n '1p' "$1")"
+
+case "$subject" in
+  Merge\ *|Revert\ *|fixup!\ *|squash!\ *|amend!\ *) exit 0 ;;
+esac
+
+if printf '%s\n' "$subject" | grep -Eq '^(build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\([a-z0-9._/-]+\))?!?: [^ ].*'; then
+  if [ "${#subject}" -gt 100 ]; then
+    echo "commit-msg: subject is ${#subject} characters; keep it to 100 or fewer." >&2
+    exit 1
+  fi
+  exit 0
+fi
+
+cat >&2 <<'MSG'
+commit-msg: the subject must follow Conventional Commits.
+
+  type(scope): summary      (scope is optional)
+
+Types: build, chore, ci, docs, feat, fix, perf, refactor, revert, style, test
+Example: docs(readme): explain the release steps
+MSG
+exit 1
