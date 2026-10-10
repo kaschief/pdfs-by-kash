@@ -692,17 +692,19 @@ def sign_embedded_macho_components() -> None:
 
 
 def finalize_application() -> None:
-    """Add Keychain-backed update support, then seal and package the app."""
-    update_public_key = sparkle_public_key()
+    """Add Keychain-backed update support (when a feed is set), then seal and package."""
+    # Without a feed (the fork's default) Sparkle is neither keyed nor bundled.
+    update_public_key = sparkle_public_key() if SPARKLE_FEED_URL else None
     write_info_plist(update_public_key)
-    sparkle_framework = bundle_sparkle()
+    sparkle_framework = bundle_sparkle() if SPARKLE_FEED_URL else None
     sign_embedded_macho_components()
     sign_ghostscript_components()
     sign(QUICK_ACTION, entitlements=QUICK_ACTION_ENTITLEMENTS)
-    sign_sparkle_framework(sparkle_framework)
+    if sparkle_framework is not None:
+        sign_sparkle_framework(sparkle_framework)
     sign(APP)
     run("codesign", "--verify", "--deep", "--strict", "--verbose=2", str(APP))
-    update_zip = DIST / f"FS-PDF-Compressor-{APP_VERSION}-arm64.zip"
+    update_zip = DIST / f"Pdfs-by-Kash-{APP_VERSION}-arm64.zip"
     run("ditto", "-c", "-k", "--keepParent", str(APP), str(update_zip))
     dmg_root = DIST / "dmg-root"
     shutil.rmtree(dmg_root, ignore_errors=True)
