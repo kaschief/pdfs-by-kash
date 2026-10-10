@@ -311,7 +311,8 @@ class PDFCompressorController(FN.NSObject):
         self._refresh_tiles(idle)
 
         has_ready = self.queue.has_ready
-        again = not has_ready and self.queue.has_finished
+        # "Compress Again" only once a batch is over, never mid-run.
+        again = idle and not has_ready and self.queue.has_finished
         self.compress_button.setTitle_("Compress Again" if again else "Compress")
         self.compress_button.setEnabled_(idle and (has_ready or again))
         self.clear_button.setEnabled_(idle and len(self.queue) > 0)
@@ -536,7 +537,7 @@ class PDFCompressorController(FN.NSObject):
 
     def show_main_window(self):
         if os.environ.get("PDFS_BY_KASH_BACKGROUND") == "1":
-            self.window.orderBack_(None)  # tests: exist on screen, never in front
+            return  # automated checks render off-screen: never on the user's screen
         else:
             self.window.makeKeyAndOrderFront_(None)
         self.window.makeFirstResponder_(None)  # no focus ring until the user Tabs

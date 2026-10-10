@@ -156,7 +156,7 @@ class SettingsWindowController(AK.NSObject):
     def show(self):
         self.refresh()
         if os.environ.get("PDFS_BY_KASH_BACKGROUND") == "1":
-            self.window.orderBack_(None)
+            return  # automated checks render off-screen
         else:
             self.window.makeKeyAndOrderFront_(None)
         self.window.makeFirstResponder_(None)  # no focus ring until the user Tabs
