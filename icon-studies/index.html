@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Pdfs Icon Studies</title>
+<style>
+  :root {
+    --bg: #f4f3f7; --surface: #ffffff; --text: #1b1a22; --muted: #6c6a78; --line: #e3e1ea;
+    --chip: #efedf5; --accent: #ff4f7b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #121117; --surface: #1b1a22; --text: #eeedf3; --muted: #9a98a8; --line: #2a2933; --chip: #26252f;
+    }
+  }
+  :root[data-theme="dark"] { --bg: #121117; --surface: #1b1a22; --text: #eeedf3; --muted: #9a98a8; --line: #2a2933; --chip: #26252f; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.5 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Avenir Next", system-ui, sans-serif; }
+  header, main, section { max-width: 1240px; margin: 0 auto; padding: 0 24px; }
+  header { padding-top: 56px; padding-bottom: 8px; }
+  .eyebrow { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  h1 { font-size: 40px; line-height: 1.1; margin: 8px 0 12px; letter-spacing: -.02em; }
+  h1 span { color: var(--muted); font-weight: 400; }
+  .lede { color: var(--muted); max-width: 720px; margin: 0; }
+  h2 { font-size: 13px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 48px 0 16px; font-weight: 600; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(360px, 100%), 1fr)); gap: 20px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 20px; display: flex; flex-direction: column; }
+  .card .hero { display: block; width: 100%; max-width: 240px; aspect-ratio: 1; margin: 0 auto 4px; }
+  .num { font: 600 12px ui-monospace, Menlo, monospace; color: var(--muted); }
+  .card h3 { margin: 2px 0 2px; font-size: 19px; letter-spacing: -.01em; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+  .tag { font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px; background: var(--chip); color: var(--muted); }
+  .card p { margin: 4px 0 14px; color: var(--muted); font-size: 14px; }
+  .sizes { margin-top: auto; display: grid; grid-template-columns: 1fr; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); }
+  .sizes div { display: flex; align-items: center; justify-content: space-evenly; gap: 6px; padding: 12px 8px; min-height: 152px; }
+  .sizes img { flex-shrink: 1; min-width: 0; max-width: 100%; height: auto; }
+  .sizes .d { background: #1e1e24; } .sizes .l { background: #ececf0; }
+  .sizes img { image-rendering: auto; }
+  .legend { font-size: 12px; color: var(--muted); margin-top: 8px; }
+
+  .dock-wrap { border-radius: 22px; padding: 64px 16px 18px; display: flex; justify-content: center; overflow-x: auto; margin-bottom: 18px; }
+  .dock-wrap.light { background: linear-gradient(160deg, #cfe4ff 0%, #f7d9e8 55%, #ffe9c9 100%); }
+  .dock-wrap.dark  { background: linear-gradient(160deg, #0d1330 0%, #2a1740 55%, #3c1a2a 100%); }
+  .dock { display: flex; gap: 6px; padding: 7px 8px 9px; border-radius: 22px; flex-shrink: 0;
+    border: 1px solid rgba(255,255,255,.55); box-shadow: 0 10px 30px rgba(0,0,0,.18), inset 0 1px 0 rgba(255,255,255,.5);
+    backdrop-filter: blur(20px); }
+  .light .dock { background: rgba(255,255,255,.42); }
+  .dark .dock { background: rgba(40,38,52,.55); border-color: rgba(255,255,255,.16); box-shadow: 0 10px 30px rgba(0,0,0,.4), inset 0 1px 0 rgba(255,255,255,.08); }
+  .dock figure { margin: 0; position: relative; width: 64px; display: flex; flex-direction: column; align-items: center; }
+  .dock img { width: 64px; height: 64px; transition: transform .18s ease; transform-origin: bottom center; }
+  .dock figure:hover img { transform: scale(1.35) translateY(-6px); }
+  .dock figcaption { position: absolute; top: -40px; white-space: nowrap; font-size: 12px; padding: 3px 9px; border-radius: 7px;
+    background: rgba(30,30,36,.82); color: #fff; opacity: 0; pointer-events: none; transition: opacity .12s; }
+  .dock figure:hover figcaption { opacity: 1; }
+  .dock .dot { width: 4px; height: 4px; border-radius: 50%; margin-top: 3px; background: transparent; }
+  .light .dock .dot.on { background: #333; } .dark .dock .dot.on { background: #ddd; }
+  .dock .sep { width: 1px; margin: 6px 4px; background: rgba(0,0,0,.18); }
+  .dark .dock .sep { background: rgba(255,255,255,.2); }
+
+  .family { display: flex; gap: 28px; align-items: flex-end; flex-wrap: wrap; background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 24px; }
+  .family figure { margin: 0; text-align: center; font-size: 13px; color: var(--muted); }
+  .family img { width: 128px; height: 128px; display: block; margin-bottom: 6px; }
+  .family p { flex: 1 1 260px; margin: 0; color: var(--muted); font-size: 14px; }
+
+  .picks { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 8px 24px; }
+  .picks li { margin: 12px 0; color: var(--muted); } .picks b { color: var(--text); }
+  footer { max-width: 1240px; margin: 48px auto 64px; padding: 0 24px; color: var(--muted); font-size: 13px; }
+  code { font: 12.5px ui-monospace, Menlo, monospace; background: var(--chip); padding: 1px 5px; border-radius: 5px; }
+  @media (max-width: 520px) { h1 { font-size: 30px; } header { padding-top: 32px; } header, main, section, footer { padding: 0 16px; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="eyebrow">Icon studies · exploration only</div>
+  <h1>Pdfs <span>by Kash</span></h1>
+  <p class="lede">Eight directions for the app icon. Same body as Geminio and Budget (an 824&nbsp;px rounded square on the 1024 macOS grid, soft drop shadow, fine grain), drawn as plain SVG geometry. Each card shows the icon large, then at 128, 64, 32 and 16&nbsp;px on dark and light, rendered at those exact pixel sizes.</p>
+</header>
+
+<main>
+  <h2>In the Dock</h2>
+  <div class="dock-wrap light"><div class="dock" id="dock-light"></div></div>
+  <div class="dock-wrap dark"><div class="dock" id="dock-dark"></div></div>
+
+  <h2>Concepts</h2>
+  <div class="grid" id="grid"></div>
+  <p class="legend">Small sizes are the real 128/64/32/16 px renders, shown at 1:1 CSS pixels (on a Retina screen the browser upsamples them, which is roughly what a non‑Retina Finder list shows).</p>
+
+  <h2>The by Kash family</h2>
+  <div class="family">
+    <figure><img src="reference/geminio-monoline.png" alt="Geminio Monoline icon">Geminio · Monoline</figure>
+    <figure><img src="reference/budget-allocate.png" alt="Budget Allocate study">Budget · Allocate (study)</figure>
+    <figure><img src="png/01-monoline-256.png" alt="Pdfs Monoline">Pdfs · Monoline</figure>
+    <p>The shared signature across the other apps is one illustrated lowercase initial on a dark, softly lit body. Monoline, Didone, Strata, Squish and Origami keep that signature with a <b>p</b>; Sheet, Accordion and Diamond step away from it to test whether a picture works better than a letter for a utility.</p>
+  </div>
+
+  <h2>Notes</h2>
+  <ul class="picks">
+    <li><b>Strongest overall: Strata.</b> The bands thin toward the bottom, so the compression idea is there without a single literal arrow, and the heavy white p survives 16&nbsp;px better than anything else here.</li>
+    <li><b>Best family fit: Monoline.</b> It is a sibling of Geminio's default; the faint outer rings are the larger file it used to be. Thin at 16&nbsp;px, like its siblings, so it would want a heavier small-size variant.</li>
+    <li><b>Most native: Sheet.</b> Reads instantly as a document utility next to Preview and Finder, but it is the most expected.</li>
+    <li><b>Weakest at small sizes:</b> Accordion and Squish lose their story under 32&nbsp;px (they still hold a recognisable silhouette).</li>
+  </ul>
+</main>
+
+<footer>Regenerate with <code>python3 icon-studies/scripts/generate.py &amp;&amp; icon-studies/scripts/render.sh</code>. Sources in <code>icon-studies/concepts/</code>, renders in <code>icon-studies/png/</code>.</footer>
+
+<script>
+const concepts = [
+  ['01-monoline', 'Monoline', 'family', 'A hairline p in a warm gradient; the faint rings around its bowl are the bigger file it used to be. The direct sibling of Geminio’s Monoline.'],
+  ['02-squish', 'Squish', 'playful', 'A fat glossy p squashed flat under a press plate. Compression as a cartoon, warm and a little silly.'],
+  ['03-sheet', 'Sheet', 'macOS-native', 'Preview-white page, its old outline dashed behind it, and the system “shrink” arrows in system blue.'],
+  ['04-accordion', 'Accordion', 'abstract', 'One page of text folded into bellows: the folds tighten left to right until the page is a few pleats.'],
+  ['05-diamond', 'Diamond', 'elegant', 'Pressure makes diamonds. A small, bright, cut stone: the file comes out smaller and better.'],
+  ['06-didone', 'Didone', 'elegant / editorial', 'A Didot-style p in ink on warm paper; the text rules behind it set tighter toward the bottom. The red full stop is the maker’s mark.'],
+  ['07-strata', 'Strata', 'modern', 'Bands of colour pressed thinner and thinner, like rock strata, under a heavy white p. Compression without an arrow.'],
+  ['08-origami', 'Origami', 'minimal', 'A p folded from one strip of paper: smaller, nothing lost. The navy back of the paper shows at the folded foot.'],
+];
+const grid = document.getElementById('grid');
+for (const [file, name, tag, why] of concepts) {
+  const n = file.slice(0, 2);
+  const small = (bg) => `<div class="${bg}">${[128, 64, 32, 16].map(s => `<img src="png/${file}-${s}.png" width="${s}" height="${s}" alt="">`).join('')}</div>`;
+  grid.insertAdjacentHTML('beforeend', `<article class="card">
+    <img class="hero" src="png/${file}-1024.png" alt="${name} icon concept">
+    <span class="num">${n}</span>
+    <h3>${name} <span class="tag">${tag}</span></h3>
+    <p>${why}</p>
+    <div class="sizes">${small('d')}${small('l')}</div>
+  </article>`);
+}
+for (const id of ['dock-light', 'dock-dark']) {
+  const dock = document.getElementById(id);
+  concepts.forEach(([file, name], i) => {
+    if (i === 4) dock.insertAdjacentHTML('beforeend', '<span class="sep"></span>');
+    dock.insertAdjacentHTML('beforeend', `<figure><figcaption>${name}</figcaption><img src="png/${file}-128.png" alt="${name}"><span class="dot ${i % 3 === 0 ? 'on' : ''}"></span></figure>`);
+  });
+}
+</script>
+</body>
+</html>

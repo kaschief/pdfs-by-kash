@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+<defs>
+  <clipPath id="body"><rect x="100" y="100" width="824" height="824" rx="188"/></clipPath>
+  <filter id="drop" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="0" dy="16" stdDeviation="16" flood-color="#000" flood-opacity=".38"/></filter>
+  <linearGradient id="rim" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0.22"/><stop offset=".35" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".18"/></linearGradient>
+  <radialGradient id="bg" cx=".5" cy=".42" r=".75"><stop offset="0" stop-color="#2b3a86"/><stop offset=".55" stop-color="#141c4d"/><stop offset="1" stop-color="#080b22"/></radialGradient>
+  <linearGradient id="tint" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff9ad5" stop-opacity=".35"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#7ef0ff" stop-opacity=".35"/></linearGradient>
+  <clipPath id="gem"><polygon points="362,318 662,318 782,440 512,790 242,440"/></clipPath>
+  <filter id="glow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="40"/></filter><filter id="gshadow" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="30" stdDeviation="26" flood-color="#000" flood-opacity="0.5"/></filter><filter id="grain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="1.1" numOctaves="2" seed="7"/><feColorMatrix type="matrix" values="0 0 0 0 .5  0 0 0 0 .5  0 0 0 0 .5  0 0 0 0.08 0"/></filter>
+</defs>
+<g filter="url(#drop)"><rect x="100" y="100" width="824" height="824" rx="188" fill="#0b1030"/></g>
+<g clip-path="url(#body)">
+<rect width="1024" height="1024" fill="url(#bg)"/>
+<ellipse cx="512" cy="554.0" rx="260" ry="250" fill="#6f8cff" opacity=".35" filter="url(#glow)"/>
+<g filter="url(#gshadow)"><polygon points="362,318 242,440 377,440" fill="#d9e6ff"/><polygon points="362,318 377,440 512,318" fill="#f6f9ff"/><polygon points="512,318 377,440 512,440" fill="#bcd0ff"/><polygon points="512,318 512,440 647,440" fill="#e8efff"/><polygon points="512,318 647,440 662,318" fill="#cfdcff"/><polygon points="662,318 647,440 782,440" fill="#a9bdf5"/><polygon points="242,440 377,440 512,790" fill="#9fb6f2"/><polygon points="377,440 512,440 512,790" fill="#e3ebff"/><polygon points="512,440 647,440 512,790" fill="#c3d3ff"/><polygon points="647,440 782,440 512,790" fill="#7f97de"/></g>
+<g clip-path="url(#gem)"><rect width="1024" height="1024" fill="url(#tint)"/><path d="M377,440 L462,670 M647,440 L562,670" stroke="#fff" stroke-opacity=".35" stroke-width="3" fill="none"/></g>
+<polygon points="362,318 242,440 377,440" fill="none" stroke="#ffffff" stroke-opacity=".7" stroke-width="3" stroke-linejoin="round"/><polygon points="362,318 377,440 512,318" fill="none" stroke="#ffffff" stroke-opacity=".7" stroke-width="3" stroke-linejoin="round"/><polygon points="512,318 377,440 512,440" fill="none" stroke="#ffffff" stroke-opacity=".7" stroke-width="3" stroke-linejoin="round"/><polygon points="512,318 512,440 647,440" fill="none" stroke="#ffffff" stroke-opacity=".7" stroke-width="3" stroke-linejoin="round"/><polygon points="512,318 647,440 662,318" fill="none" stroke="#ffffff" stroke-opacity=".7" stroke-width="3" stroke-linejoin="round"/><polygon points="662,318 647,440 782,440" fill="none" stroke="#ffffff" stroke-opacity=".7" stroke-width="3" stroke-linejoin="round"/><polygon points="242,440 377,440 512,790" fill="none" stroke="#ffffff" stroke-opacity=".7" stroke-width="3" stroke-linejoin="round"/><polygon points="377,440 512,440 512,790" fill="none" stroke="#ffffff" stroke-opacity=".7" stroke-width="3" stroke-linejoin="round"/><polygon points="512,440 647,440 512,790" fill="none" stroke="#ffffff" stroke-opacity=".7" stroke-width="3" stroke-linejoin="round"/><polygon points="647,440 782,440 512,790" fill="none" stroke="#ffffff" stroke-opacity=".7" stroke-width="3" stroke-linejoin="round"/>
+<path d="M684,254 Q684,300 730,300 Q684,300 684,346 Q684,300 638,300 Q684,300 684,254 Z" fill="#fff" opacity="0.95"/><path d="M330,716 Q330,742 356,742 Q330,742 330,768 Q330,742 304,742 Q330,742 330,716 Z" fill="#fff" opacity="0.6"/>
+<rect width="1024" height="1024" filter="url(#grain)"/>
+</g>
+<rect x="101.5" y="101.5" width="821" height="821" rx="186.5" fill="none" stroke="url(#rim)" stroke-width="3"/>
+</svg>
