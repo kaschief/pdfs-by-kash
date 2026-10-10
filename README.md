@@ -196,8 +196,8 @@ Design decisions are shown as mockups before they're built. The explorations are
 - [Settings alignment](docs/design/settings-v2/index.html) — Settings reduced to icon and theme,
   the opaque option card and the design tokens.
 
-Branches: `pdfs-home` is home. `icon-exploration` and `settings-design-exploration` are merged
-and kept for history.
+Branches: `pdfs-home` is the only branch. Explorations happen on short-lived branches and are
+merged here when approved; their work lives on in the folders above.
 
 ## Origins and license
 
