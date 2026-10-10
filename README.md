@@ -186,6 +186,14 @@ Tests and screenshots:
 | `scripts/render_docs_screenshots.py` | Regenerates `docs/screenshots/` |
 | `scripts/dev.sh`, `scripts/install_local_mac.sh` | Dev run; rebuild + install + reopen |
 
+### Commits
+
+Commit messages must follow [Conventional Commits](https://www.conventionalcommits.org/) (`type(scope): summary`, scope optional). The rule is enforced by `.githooks/commit-msg`. Git does not switch repo hooks on by itself, so after a fresh clone run this once in the repo:
+
+```shell
+git config core.hooksPath .githooks
+```
+
 ### Design history
 
 Design decisions are shown as mockups before they're built. The explorations are kept:
