@@ -1,229 +1,199 @@
+<div align="center">
+
+<img src="assets/app-icons/squish.png" alt="Pdfs by Kash" width="96" />
+
 # Pdfs by Kash
 
-A personal macOS fork of [FS PDF Compressor](https://github.com/gitlares/fs-pdf-compressor)
-by Daniel Lares, licensed under the GNU AGPL v3 (see [LICENSE](LICENSE)).
+**Kash's PDF compressor. Add, review, compress — on your Mac, nothing uploaded.**
 
-**What's different from upstream (macOS app):**
+A small native macOS utility that shrinks PDFs locally with Ghostscript, built around a calm
+“add files → check settings → compress → see results” workflow.
 
-- **Queue, review, then compress.** Adding files (window, + button, Drop Zone, Finder
-  Quick Action) only queues them. Nothing compresses until you click **Compress**.
-- **Sizes up front.** Each row shows Original → Compressed → Reduction, with a status
-  icon (pending, compressing, compressed, unchanged, failed).
-- **Visible destination.** "Save to" shows where files go: next to each original
-  (`name compressed.pdf`) or a folder you choose. Hover any row for the full path;
-  click the magnifier (or double-click) to reveal the file in Finder.
-- **Explicit originals.** Keep (default) or Replace. Replace only overwrites after the
-  compressed file is created and verified; the old version goes to the Trash.
-- **Settings (⌘,)** holds only the app icon (eight designs, Squish by default) and the
-  theme. The chosen icon shows in the Dock and app switcher, and on the kept-in-Dock tile
-  while the app is closed. Finder and Launchpad always show Squish: changing a signed
-  app's own file icon would break its code signature.
-- Quality and Save to are remembered between launches; Originals always starts on Keep.
-- Upstream's Sparkle auto-update feed is disabled so the fork is never replaced by
-  an upstream build.
+[What Pdfs by Kash changes](docs/pdfs-by-kash-changes.md) · [Design history](#design-history) · [Run locally](#run-locally) · [Original project](docs/UPSTREAM-README.md) · [AGPL-3.0 license](LICENSE)
 
-Run from source: `brew install python@3.12 ghostscript`, then
-`python3.12 -m venv .build-venv && .build-venv/bin/pip install -r requirements-build.txt && .build-venv/bin/python native_app.py`.
+<img src="docs/screenshots/results.png" alt="Pdfs by Kash after compressing five PDFs: original and compressed sizes with the reduction for each file" width="760" />
 
-The original project README follows.
+</div>
 
----
+## The Pdfs by Kash approach
 
-<p align="center">
-  <img src="assets/PDFCompresor.png" width="160" alt="FS PDF Compressor icon">
-</p>
+Pdfs by Kash is developed and maintained by **Kash (Kaschief Johnson)**. It began as a fork
+of [FS PDF Compressor](https://github.com/gitlares/fs-pdf-compressor) by Daniel Lares and keeps
+its engine — Ghostscript, with upstream's careful file-safety checks — while reshaping the Mac
+app around a few rules shared with Kash's other apps (Geminio, Budget):
 
-<h1 align="center">FS PDF Compressor</h1>
+- **Nothing happens until you ask.** Adding files only lists them. Compression starts with
+  **Compress**, never by itself.
+- **Nothing is hidden or ambiguous.** Where each file will go, what happens to the original and
+  the quality are always on screen, in words.
+- **Nothing moves under the pointer.** Controls keep fixed places; things that don't apply grey
+  out instead of disappearing.
+- **Quiet by default.** One accent colour, hairline borders, hover feedback only on what you can
+  click, focus rings only for keyboard use, tooltips only for detail you can't already see.
 
-<p align="center">
-  FS = Fast &amp; Simple: free, private PDF compression for Mac, Windows, and Linux. Drag, drop, done.
-</p>
+## What Pdfs by Kash adds
 
-<p align="center">
-  <a href="https://gitlares.github.io/fs-pdf-compressor/">Website</a>
-  ·
-  <a href="https://github.com/gitlares/fs-pdf-compressor/releases/latest">Download</a>
-  ·
-  <a href="CONTRIBUTING.md">Contribute</a>
-  ·
-  <a href="https://www.paypal.com/donate/?hosted_button_id=7RDCBR3QXXEMJ">♥ Support</a>
-  ·
-  <a href="PRIVACY.md">Privacy</a>
-</p>
+Everything FS PDF Compressor does on the Mac, plus the changes below.
+**[What Pdfs by Kash changes](docs/pdfs-by-kash-changes.md)** is the running list behind this
+digest — each change, the problem it solves and its limits — and it is updated with every change.
 
-<p align="center">
-  <img src="assets/fs-pdf-compressor-demo.gif" width="800" alt="Compressing a PDF locally on macOS by dragging it from Finder into FS PDF Compressor">
-</p>
+**Workflow**
 
-FS PDF Compressor — **Fast & Simple PDF Compressor** — is a deliberately
-small, free PDF compressor for Mac, Windows, and Linux. It compresses PDFs locally with
-Ghostscript, so you can compress PDF files without uploading them to a website.
-It is a private, open-source PDF compressor for Apple Silicon Macs and x86_64
-Linux, with a self-contained AppImage for Linux users and a Windows x64 installer.
+- **Add, review, then compress.** Drop files or folders on the window, the Dock icon, the Drop
+  Zone or Finder's **Add to Pdfs by Kash** — they're listed, not processed. Add more any time,
+  even mid-batch; they wait for the next run.
+- **Sizes before and after.** Original, Compressed and Reduction columns, with a total saved.
+- **Clear states.** Newly added files carry no badge. After **Compress**: Queued → Compressing
+  (with a row progress line) → Completed, Not smaller, or Failed with the reason in plain words.
 
-## Features
+<img src="docs/screenshots/compressing.png" alt="A batch in progress: one file completed, one compressing, three queued" width="760" />
 
-- Drag and drop one PDF, several PDFs, or a folder.
-- Send selected PDFs from Finder, Windows Explorer, GNOME Files, or KDE Dolphin.
-- Balanced compression by default, with two optional quality profiles.
-- Replaces the original only when the result is smaller.
-- Optional **Keep original** mode creates a separate compressed copy and
-  remembers your choice between app launches.
-- Processes everything locally: no uploads, accounts, analytics or telemetry.
-- Includes Ghostscript, so end users do not need Homebrew or a separate install.
-- macOS distribution is Developer ID signed and notarized by Apple.
+**Settings that stay in view**
 
-### Drop Zone
-
-**Drop Zone** is an optional shortcut for compressing PDFs without reopening
-the main window. It gives FS PDF Compressor a little personality while keeping
-the workflow fast: leave the small target on the desktop and drop PDFs onto it
-whenever they need to be compressed. Double-click it to reopen the main window.
+- **Three tiles: Save to · Originals · Quality.** Click one for a small card of choices, each
+  with one line of explanation. The tiles never change width, so nothing shifts.
+- **Save to** next to each original (`name compressed.pdf`) or a folder you choose (the original
+  name is kept; `name 2.pdf` if taken). Every row says where its file will go, or went.
+- **Keep or Replace originals.** Keep is the default and every launch starts there, so a one-off
+  Replace never carries over. Quality and Save to are remembered.
 
 <p align="center">
-  <img src="assets/fs-pdf-compressor-drop-zone.gif" width="800" alt="Dropping a PDF onto FS PDF Compressor Drop Zone on macOS">
+  <img src="docs/screenshots/ready.png" alt="Five PDFs added and ready, with the Save to, Originals and Quality tiles" width="49%" />
+  <img src="docs/screenshots/option-panel.png" alt="The Originals option card: Keep originals or Replace originals" width="40%" />
 </p>
 
-- On **macOS**, choose **FS PDF Compressor → Show Drop Zone**. The Drop Zone is
-  available in every Space (virtual desktop). Uncheck the same menu item to
-  hide and disable it. **Launch at Login** in the same menu is optional.
-- On **Linux**, choose **Application → Show Drop Zone** and uncheck it to hide
-  and disable it. X11 desktops can keep it at desktop level. Under Wayland, the
-  compositor controls window placement and stacking, so the app cannot
-  reliably pin it to the desktop layer; it may appear as a normal floating
-  utility. We are investigating better Wayland integration.
-- On **Windows**, the Drop Zone is shown on first launch. Closing the main
-  window leaves it available; double-click it to reopen the app.
+**Safe replacing**
 
-The setting and position are remembered. Drop Zone stays idle without polling
-the filesystem and uses the same local compression engine and selected quality
-profile as the main window.
+- **An original is replaced only once it's in the Trash.** The compressed file is created and
+  checked first; then the original goes to the Trash; only then does the new file take its place.
+  If the Trash isn't available (some network or external drives), the original is left as is and
+  the row says so. *(Upstream replaced anyway in that case.)*
+- **A calm confirmation** the first time — “Replace these 4 PDFs with smaller versions? The
+  originals go to the Trash, so you can get them back.” — with **Don't ask again**.
 
-### File-manager actions
+<img src="docs/screenshots/replace.png" alt="Replace mode: rows read Will replace the original, Save to is greyed out in place" width="760" />
 
-- On **macOS**, select one or more PDFs in Finder and choose **Quick Actions →
-  Compress with FS PDF Compressor**. If it is hidden after installation, open
-  **Quick Actions → Customize…** once and enable it under Finder extensions.
-- On **GNOME Files**, the per-user AppImage installer adds **Compress with FS
-  PDF Compressor** to the **Scripts** submenu.
-- On **KDE Dolphin**, the per-user AppImage installer adds **Compress with FS
-  PDF Compressor** to the **Actions** submenu for PDF files.
-- On **Windows**, select PDFs in Explorer and choose **Compress with FS PDF
-  Compressor**. Windows 11 may place this classic per-user action under
-  **Show more options**.
+**Selecting and finding files**
 
-All three actions pass the selected files to the same local compression flow;
-no document is uploaded.
+- **Pick files one by one** with the circle that appears on hover — no ⌘ needed (⌘ and ⇧ still
+  work). A floating bar offers **Show in Finder**, **Remove from List** and **✕** (or Esc) to deselect.
+- **Selection never changes what Compress does** — it always covers every ready file, and the
+  footer says so while files are selected.
+- **Show in Finder** on hover (Finder icon), double-click, right-click or ⌘R. Open and Copy Path
+  are in the right-click menu. **Clear List** empties the list; files on disk are never touched.
 
-## Download
+<img src="docs/screenshots/selection.png" alt="Two files selected with the floating bar: Show in Finder, Remove from List, deselect" width="760" />
 
-- **macOS 14+ on Apple Silicon:** [download the signed and notarized DMG](https://github.com/gitlares/fs-pdf-compressor/releases/latest).
-- **Linux x86_64:** [install from the Snap Store](https://snapcraft.io/fs-pdf-compressor) for automatic updates, or [download the self-contained AppImage](https://github.com/gitlares/fs-pdf-compressor/releases/latest/download/FS-PDF-Compressor-x86_64.AppImage).
-- **Windows 11 x64:** [download the per-user installer](https://github.com/gitlares/fs-pdf-compressor/releases/latest/download/FS-PDF-Compressor-1.0.16-windows-x86_64-setup.exe) or the [portable ZIP](https://github.com/gitlares/fs-pdf-compressor/releases/latest/download/FS-PDF-Compressor-1.0.16-windows-x86_64.zip).
+**Settings window (⌘,)**
 
-The macOS build is Developer ID signed and Apple-notarized, so it opens
-normally with Gatekeeper enabled. The Linux AppImage is portable and bundles
-Ghostscript; make it executable and run it, or use the per-user installer:
+- **Eight app icons**, Squish by default. The choice shows in the Dock and app switcher at once,
+  and on the kept-in-Dock tile while the app is closed (a small Dock tile plug-in inside the app).
+  Finder and Launchpad always show Squish: changing a signed app's own file icon would break its
+  code signature.
+- **Theme:** System, Light or Dark. Both choices survive restarts.
+- That's all Settings holds — everything about compressing lives on the main screen.
 
-```sh
-curl -fsSLO https://raw.githubusercontent.com/gitlares/fs-pdf-compressor/main/scripts/install_linux_appimage.sh
-sh install_linux_appimage.sh
-```
+<p align="center">
+  <img src="docs/screenshots/settings.png" alt="Settings in light mode: eight app icons and the theme" width="44%" />
+  <img src="docs/screenshots/settings-dark.png" alt="Settings in dark mode with Strata selected" width="44%" />
+</p>
 
-The installer needs no `sudo`. It verifies the published SHA-256 checksum,
-adds FS PDF Compressor to the applications menu, and keeps the AppImage in a
-user-writable location so in-app updates can replace it safely.
+<table align="center"><tr>
+<td align="center"><img src="assets/app-icons/monoline.png" width="64" /><br/>Monoline</td>
+<td align="center"><img src="assets/app-icons/squish.png" width="64" /><br/><b>Squish</b></td>
+<td align="center"><img src="assets/app-icons/sheet.png" width="64" /><br/>Sheet</td>
+<td align="center"><img src="assets/app-icons/accordion.png" width="64" /><br/>Accordion</td>
+<td align="center"><img src="assets/app-icons/diamond.png" width="64" /><br/>Diamond</td>
+<td align="center"><img src="assets/app-icons/didone.png" width="64" /><br/>Didone</td>
+<td align="center"><img src="assets/app-icons/strata.png" width="64" /><br/>Strata</td>
+<td align="center"><img src="assets/app-icons/origami.png" width="64" /><br/>Origami</td>
+</tr></table>
 
-The Windows installer includes its dependencies and needs no administrator
-rights. It is currently unsigned, so verify the matching published SHA-256
-checksum before installing it. Windows updates are manual for now: download a
-new installer from the official GitHub release when one is published.
+**Look and feel**
 
-See [what changed in 1.0.16](docs/releases/1.0.16.md) or read the complete
-[changelog](CHANGELOG.md).
+- **One design system** (`fs_pdf_compressor/macos_theme.py`): indigo accent, lavender-tinted
+  neutrals, one hairline, 8–12 pt radii — in light and dark, independent of the system accent.
+- **Dark mode throughout.**
 
-## Build from source
+<img src="docs/screenshots/results-dark.png" alt="Results in dark mode" width="760" />
 
-### macOS
+**Under the hood**
 
-Requirements: Apple Silicon Mac, macOS 14+, Homebrew and Python 3.12.
+- Renamed throughout: app, bundle id `com.kaschief.pdfsbykash`, Finder Quick Action, URL scheme.
+- Upstream's auto-update feed is switched off, so the fork is never replaced by an upstream build.
+- About keeps the original author's credit and the AGPL notice.
 
-```shell
+## Using it
+
+1. **Add PDFs** — drag files or folders onto the window, click **+**, or ⌘O.
+2. **Check the tiles** — Save to, Originals, Quality. Each row shows where its file will go.
+3. **Compress** — or press Return.
+4. **Review** — sizes and reduction per file; hover a row to show it in Finder.
+
+Keyboard: ⌘O add · Return compress · ⌘R show in Finder · Delete remove from list · Esc deselect ·
+⌘A select all · ⌘, Settings · Tab moves a thin focus ring through the controls.
+
+## Run locally
+
+macOS 26 on Apple Silicon.
+
+```bash
 brew install python@3.12 ghostscript
 python3.12 -m venv .build-venv
-.build-venv/bin/python -m pip install -r requirements-build.txt
-.build-venv/bin/python build_macos.py
+.build-venv/bin/pip install -r requirements-build.txt
+.build-venv/bin/python native_app.py
 ```
 
-The app and DMG are written to `release/`. The build bundles Ghostscript and its
-non-system dynamic libraries, copies detected license files, and rewrites their
-Mach-O paths. Local builds use an ad-hoc signature unless a Developer ID
-identity is supplied; see [the release guide](docs/RELEASING.md) for the
-notarized distribution workflow.
+Build the signed `.app` (ad hoc), DMG and zip into `release-test/`. The build pins
+Ghostscript 10.07.1; if Homebrew has a newer one, point it at an app that bundles 10.07.1:
 
-### Linux
+```bash
+DIST_DIR=release-test MACOS_GHOSTSCRIPT_SOURCE_APP="/Applications/FS PDF Compressor.app" .build-venv/bin/python build_macos.py
+```
 
-The Linux edition is developed in this same repository. It uses the same
-compression engine and profiles, with a Qt interface designed to match the
-macOS app. The x86_64 AppImage bundles Ghostscript and has an in-app update
-check; see [Linux instructions](docs/LINUX.md).
+Tests and screenshots:
 
-### Windows
+```bash
+.build-venv/bin/python -m unittest discover -s tests
+.build-venv/bin/python scripts/render_docs_screenshots.py   # off-screen, never takes focus
+```
 
-The Windows edition uses the shared Qt interface and can be built from source
-as an x86_64 per-user installer. See the [Windows build and test
-instructions](docs/WINDOWS.md). The public installer and its portable ZIP are
-available from the [1.0.16 release](https://github.com/gitlares/fs-pdf-compressor/releases/tag/v1.0.16).
+## Settings, data and compatibility
 
-## Code structure
+- Preferences live in the `com.kaschief.pdfsbykash` defaults domain: `AppIcon`, `Appearance`,
+  `QualityIndex`, `OutputFolder`, `UseOutputFolder`, `SkipReplaceConfirmation`.
+- Nothing leaves your Mac: no accounts, no network requests (the update check is off).
+- The Windows and Linux apps in this repository are upstream's and unchanged, apart from the
+  shared rule that an original is only replaced once it is in the Trash.
 
-The application keeps compression behavior independent from its interfaces:
+## Development and documentation
 
-- `fs_pdf_compressor/core.py` owns PDF discovery, Ghostscript execution and
-  output-file safety.
-- `fs_pdf_compressor/batch.py` owns platform-neutral batch summaries.
-- `native_app.py` and the `macos_*` modules provide the AppKit application.
-- `linux_app.py` and the `linux_*` modules provide the Qt application and
-  AppImage update flow.
-- `windows_app.py` and `linux_app.py` provide the shared Qt application for
-  Windows and Linux; `native_app.py` provides the macOS application.
-- `build_macos.py`, `build_linux.py`, and `build_windows.py` package the same
-  source for their respective platforms.
+| Where | What |
+|---|---|
+| [docs/pdfs-by-kash-changes.md](docs/pdfs-by-kash-changes.md) | Running list of every change since the fork — update it with each change |
+| [CHANGELOG.md](CHANGELOG.md) | Release notes (upstream history below the fork entry) |
+| `fs_pdf_compressor/macos_theme.py` | Design tokens: colour, shape, focus, motion |
+| `fs_pdf_compressor/compression_queue.py` | The list's model: one state per file |
+| `macos_dock_tile/` | Dock tile plug-in that shows the chosen icon while the app is closed |
+| `scripts/render_docs_screenshots.py` | Regenerates `docs/screenshots/` |
 
-## Acknowledgements
+### Design history
 
-The Linux edition is distributed as an [AppImage](https://appimage.org/). Thank
-you to Simon Peter and the AppImage project for a philosophy that fits this
-application: less software around the task, but a well-made, portable tool
-that users can simply download and run.
+Design decisions are shown as mockups before they're built. The explorations are kept:
 
-## Contributing
+- [App icon studies](docs/icon-studies/index.html) — the eight icons at every size, in a mock Dock.
+- [Settings bar directions A–D](docs/design/settings-bar/index.html) — A (setting tiles) was chosen;
+  also the file-list states, selection and reveal proposals.
+- [Settings alignment](docs/design/settings-v2/index.html) — Settings reduced to icon and theme,
+  the opaque option card and the design tokens.
 
-Issues, translations, accessibility improvements and focused pull requests are
-welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) before submitting changes. If
-the app is useful to you, starring and sharing the repository also helps.
+Branches: `pdfs-home` is home. `icon-exploration` and `settings-design-exploration` are merged
+and kept for history.
 
-## Support the project
+## Origins and license
 
-If FS PDF Compressor saves you time, you can support its continued development
-with an optional [PayPal donation](https://www.paypal.com/donate/?hosted_button_id=7RDCBR3QXXEMJ).
-The app remains free and open source for everyone.
-
-## Privacy
-
-PDFs never leave your computer. Network access is limited to documented update
-delivery and links opened by the user; see the short
-[privacy statement](PRIVACY.md).
-
-## License
-
-FS PDF Compressor is released under the GNU Affero General Public License v3.0
-or later. Version 1.0.16 bundles Ghostscript 10.07.1 under the AGPL and
-other open-source libraries; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
-
-Copyright © 2026 Daniel Lares.
-
-## More apps by Daniel Lares
-
-- **[FS Desktop LEDs](https://gitlares.github.io/fs-desktop-leds/)** — Control desk lighting from the Mac menu bar. [Source code](https://github.com/gitlares/fs-desktop-leds).
-- **[FS User Stories](https://gitlares.github.io/fs-user-stories/)** — Organize user stories with local data and optional Git sharing. [Source code](https://github.com/gitlares/fs-user-stories).
+Pdfs by Kash is a modified version of **FS PDF Compressor** © 2026 Daniel Lares
+([source](https://github.com/gitlares/fs-pdf-compressor)), and is distributed under the
+**GNU Affero General Public License v3.0 or later** — see [LICENSE](LICENSE). Ghostscript is
+© Artifex Software, AGPL-3.0. Third-party notices: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+The original README is kept at [docs/UPSTREAM-README.md](docs/UPSTREAM-README.md).

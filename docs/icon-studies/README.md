@@ -1,6 +1,6 @@
 # Pdfs by Kash: app icon studies
 
-Eight candidate app icons for the rename of FS PDF Compressor to **Pdfs by Kash**. Exploration only: nothing in the app uses these, and `assets/PDFCompresor.*` and `build_macos.py` are unchanged.
+The eight app icons for **Pdfs by Kash**. All eight were approved and ship in the app: Settings → App Icon offers every one, with **Squish** as the default. The shipped copies live in `assets/app-icons/` (SVG source + 512 px PNG) and `assets/AppIcon.icns` (Squish, the bundle icon). This folder keeps the original study: renders at every size, the comparison page and the generator.
 
 Open `index.html` in a browser: every concept large, at 128/64/32/16 px on dark and light, and in a mock macOS Dock on a light and a dark wallpaper.
 

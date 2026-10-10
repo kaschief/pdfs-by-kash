@@ -1,0 +1,200 @@
+> The original FS PDF Compressor README by Daniel Lares, kept for reference. Pdfs by Kash's own README is at the repository root.
+
+<p align="center">
+  <img src="../assets/PDFCompresor.png" width="160" alt="FS PDF Compressor icon">
+</p>
+
+<h1 align="center">FS PDF Compressor</h1>
+
+<p align="center">
+  FS = Fast &amp; Simple: free, private PDF compression for Mac, Windows, and Linux. Drag, drop, done.
+</p>
+
+<p align="center">
+  <a href="https://gitlares.github.io/fs-pdf-compressor/">Website</a>
+  ·
+  <a href="https://github.com/gitlares/fs-pdf-compressor/releases/latest">Download</a>
+  ·
+  <a href="CONTRIBUTING.md">Contribute</a>
+  ·
+  <a href="https://www.paypal.com/donate/?hosted_button_id=7RDCBR3QXXEMJ">♥ Support</a>
+  ·
+  <a href="PRIVACY.md">Privacy</a>
+</p>
+
+<p align="center">
+  <img src="../assets/fs-pdf-compressor-demo.gif" width="800" alt="Compressing a PDF locally on macOS by dragging it from Finder into FS PDF Compressor">
+</p>
+
+FS PDF Compressor — **Fast & Simple PDF Compressor** — is a deliberately
+small, free PDF compressor for Mac, Windows, and Linux. It compresses PDFs locally with
+Ghostscript, so you can compress PDF files without uploading them to a website.
+It is a private, open-source PDF compressor for Apple Silicon Macs and x86_64
+Linux, with a self-contained AppImage for Linux users and a Windows x64 installer.
+
+## Features
+
+- Drag and drop one PDF, several PDFs, or a folder.
+- Send selected PDFs from Finder, Windows Explorer, GNOME Files, or KDE Dolphin.
+- Balanced compression by default, with two optional quality profiles.
+- Replaces the original only when the result is smaller.
+- Optional **Keep original** mode creates a separate compressed copy and
+  remembers your choice between app launches.
+- Processes everything locally: no uploads, accounts, analytics or telemetry.
+- Includes Ghostscript, so end users do not need Homebrew or a separate install.
+- macOS distribution is Developer ID signed and notarized by Apple.
+
+### Drop Zone
+
+**Drop Zone** is an optional shortcut for compressing PDFs without reopening
+the main window. It gives FS PDF Compressor a little personality while keeping
+the workflow fast: leave the small target on the desktop and drop PDFs onto it
+whenever they need to be compressed. Double-click it to reopen the main window.
+
+<p align="center">
+  <img src="../assets/fs-pdf-compressor-drop-zone.gif" width="800" alt="Dropping a PDF onto FS PDF Compressor Drop Zone on macOS">
+</p>
+
+- On **macOS**, choose **FS PDF Compressor → Show Drop Zone**. The Drop Zone is
+  available in every Space (virtual desktop). Uncheck the same menu item to
+  hide and disable it. **Launch at Login** in the same menu is optional.
+- On **Linux**, choose **Application → Show Drop Zone** and uncheck it to hide
+  and disable it. X11 desktops can keep it at desktop level. Under Wayland, the
+  compositor controls window placement and stacking, so the app cannot
+  reliably pin it to the desktop layer; it may appear as a normal floating
+  utility. We are investigating better Wayland integration.
+- On **Windows**, the Drop Zone is shown on first launch. Closing the main
+  window leaves it available; double-click it to reopen the app.
+
+The setting and position are remembered. Drop Zone stays idle without polling
+the filesystem and uses the same local compression engine and selected quality
+profile as the main window.
+
+### File-manager actions
+
+- On **macOS**, select one or more PDFs in Finder and choose **Quick Actions →
+  Compress with FS PDF Compressor**. If it is hidden after installation, open
+  **Quick Actions → Customize…** once and enable it under Finder extensions.
+- On **GNOME Files**, the per-user AppImage installer adds **Compress with FS
+  PDF Compressor** to the **Scripts** submenu.
+- On **KDE Dolphin**, the per-user AppImage installer adds **Compress with FS
+  PDF Compressor** to the **Actions** submenu for PDF files.
+- On **Windows**, select PDFs in Explorer and choose **Compress with FS PDF
+  Compressor**. Windows 11 may place this classic per-user action under
+  **Show more options**.
+
+All three actions pass the selected files to the same local compression flow;
+no document is uploaded.
+
+## Download
+
+- **macOS 14+ on Apple Silicon:** [download the signed and notarized DMG](https://github.com/gitlares/fs-pdf-compressor/releases/latest).
+- **Linux x86_64:** [install from the Snap Store](https://snapcraft.io/fs-pdf-compressor) for automatic updates, or [download the self-contained AppImage](https://github.com/gitlares/fs-pdf-compressor/releases/latest/download/FS-PDF-Compressor-x86_64.AppImage).
+- **Windows 11 x64:** [download the per-user installer](https://github.com/gitlares/fs-pdf-compressor/releases/latest/download/FS-PDF-Compressor-1.0.16-windows-x86_64-setup.exe) or the [portable ZIP](https://github.com/gitlares/fs-pdf-compressor/releases/latest/download/FS-PDF-Compressor-1.0.16-windows-x86_64.zip).
+
+The macOS build is Developer ID signed and Apple-notarized, so it opens
+normally with Gatekeeper enabled. The Linux AppImage is portable and bundles
+Ghostscript; make it executable and run it, or use the per-user installer:
+
+```sh
+curl -fsSLO https://raw.githubusercontent.com/gitlares/fs-pdf-compressor/main/scripts/install_linux_appimage.sh
+sh install_linux_appimage.sh
+```
+
+The installer needs no `sudo`. It verifies the published SHA-256 checksum,
+adds FS PDF Compressor to the applications menu, and keeps the AppImage in a
+user-writable location so in-app updates can replace it safely.
+
+The Windows installer includes its dependencies and needs no administrator
+rights. It is currently unsigned, so verify the matching published SHA-256
+checksum before installing it. Windows updates are manual for now: download a
+new installer from the official GitHub release when one is published.
+
+See [what changed in 1.0.16](releases/1.0.16.md) or read the complete
+[changelog](CHANGELOG.md).
+
+## Build from source
+
+### macOS
+
+Requirements: Apple Silicon Mac, macOS 14+, Homebrew and Python 3.12.
+
+```shell
+brew install python@3.12 ghostscript
+python3.12 -m venv .build-venv
+.build-venv/bin/python -m pip install -r requirements-build.txt
+.build-venv/bin/python build_macos.py
+```
+
+The app and DMG are written to `release/`. The build bundles Ghostscript and its
+non-system dynamic libraries, copies detected license files, and rewrites their
+Mach-O paths. Local builds use an ad-hoc signature unless a Developer ID
+identity is supplied; see [the release guide](RELEASING.md) for the
+notarized distribution workflow.
+
+### Linux
+
+The Linux edition is developed in this same repository. It uses the same
+compression engine and profiles, with a Qt interface designed to match the
+macOS app. The x86_64 AppImage bundles Ghostscript and has an in-app update
+check; see [Linux instructions](LINUX.md).
+
+### Windows
+
+The Windows edition uses the shared Qt interface and can be built from source
+as an x86_64 per-user installer. See the [Windows build and test
+instructions](WINDOWS.md). The public installer and its portable ZIP are
+available from the [1.0.16 release](https://github.com/gitlares/fs-pdf-compressor/releases/tag/v1.0.16).
+
+## Code structure
+
+The application keeps compression behavior independent from its interfaces:
+
+- `fs_pdf_compressor/core.py` owns PDF discovery, Ghostscript execution and
+  output-file safety.
+- `fs_pdf_compressor/batch.py` owns platform-neutral batch summaries.
+- `native_app.py` and the `macos_*` modules provide the AppKit application.
+- `linux_app.py` and the `linux_*` modules provide the Qt application and
+  AppImage update flow.
+- `windows_app.py` and `linux_app.py` provide the shared Qt application for
+  Windows and Linux; `native_app.py` provides the macOS application.
+- `build_macos.py`, `build_linux.py`, and `build_windows.py` package the same
+  source for their respective platforms.
+
+## Acknowledgements
+
+The Linux edition is distributed as an [AppImage](https://appimage.org/). Thank
+you to Simon Peter and the AppImage project for a philosophy that fits this
+application: less software around the task, but a well-made, portable tool
+that users can simply download and run.
+
+## Contributing
+
+Issues, translations, accessibility improvements and focused pull requests are
+welcome. Read [CONTRIBUTING.md](../CONTRIBUTING.md) before submitting changes. If
+the app is useful to you, starring and sharing the repository also helps.
+
+## Support the project
+
+If FS PDF Compressor saves you time, you can support its continued development
+with an optional [PayPal donation](https://www.paypal.com/donate/?hosted_button_id=7RDCBR3QXXEMJ).
+The app remains free and open source for everyone.
+
+## Privacy
+
+PDFs never leave your computer. Network access is limited to documented update
+delivery and links opened by the user; see the short
+[privacy statement](../PRIVACY.md).
+
+## License
+
+FS PDF Compressor is released under the GNU Affero General Public License v3.0
+or later. Version 1.0.16 bundles Ghostscript 10.07.1 under the AGPL and
+other open-source libraries; see [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md).
+
+Copyright © 2026 Daniel Lares.
+
+## More apps by Daniel Lares
+
+- **[FS Desktop LEDs](https://gitlares.github.io/fs-desktop-leds/)** — Control desk lighting from the Mac menu bar. [Source code](https://github.com/gitlares/fs-desktop-leds).
+- **[FS User Stories](https://gitlares.github.io/fs-user-stories/)** — Organize user stories with local data and optional Git sharing. [Source code](https://github.com/gitlares/fs-user-stories).

@@ -1,5 +1,29 @@
 # Changelog
 
+## Pdfs by Kash — unreleased (fork of 1.0.16)
+
+The macOS app is now **Pdfs by Kash**. Full detail and reasons: [docs/pdfs-by-kash-changes.md](docs/pdfs-by-kash-changes.md).
+
+### Added
+- Add, review, then compress: adding files never starts compression; **Compress** does.
+- Original, Compressed and Reduction columns; per-file "will save to / saved in" line.
+- Setting tiles for Save to (next to originals or a chosen folder), Originals (Keep / Replace) and Quality.
+- File states: Ready, Queued, Compressing, Completed, Not smaller, Failed.
+- Additive selection with a floating bar (Show in Finder, Remove from List, Deselect); Show in Finder
+  on hover, double-click, ⌘R and the right-click menu.
+- Settings (⌘,): eight app icons (Squish default) and System / Light / Dark theme, kept across restarts;
+  a Dock tile plug-in shows the chosen icon while the app is closed.
+- One design system (indigo accent, hairlines, keyboard-only focus rings, consistent button states).
+
+### Changed
+- Every launch starts on Keep originals; Quality and Save to are remembered.
+- Renamed throughout (bundle id `com.kaschief.pdfsbykash`, Quick Action "Add to Pdfs by Kash").
+- Upstream's Sparkle update feed is disabled.
+
+### Fixed
+- Replacing now requires the original to reach the Trash first; otherwise it is left untouched
+  (upstream replaced anyway, losing the original on volumes without a Trash).
+
 ## 1.0.16 — 2026-09-29
 
 - Restore Ghostscript 10.07.1 on macOS, Windows, AppImage, and Snap after a
