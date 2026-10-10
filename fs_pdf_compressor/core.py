@@ -43,6 +43,15 @@ def format_file_size(byte_count: int) -> str:
     return f"{byte_count / 1_000:.0f} KB"
 
 
+def display_folder(file_path: str) -> str:
+    """Show a file's folder the way Finder users read it, e.g. ``~/Downloads``."""
+    folder = Path(file_path).parent
+    try:
+        return str(Path("~") / folder.relative_to(Path.home()))
+    except ValueError:
+        return str(folder)
+
+
 def compressed_copy_path(original_path: str) -> str:
     path = Path(original_path)
     candidate = path.with_name(f"{path.stem} compressed{path.suffix}")
@@ -342,7 +351,12 @@ def _compress_locked(original_path, pdf_settings, keep_original):
         reduction = 100 - (new_size / original_size * 100)
         return (
             f"{os.path.basename(output_path)}   ↓ {reduction:.1f}%",
-            {"original_size": original_size, "saved_size": original_size - new_size},
+            {
+                "original_size": original_size,
+                "saved_size": original_size - new_size,
+                "new_size": new_size,
+                "output_path": output_path,
+            },
         )
     except Exception as error:
         if temp_path and os.path.exists(temp_path):

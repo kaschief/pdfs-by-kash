@@ -361,6 +361,7 @@ class PDFCompressorController(FN.NSObject):
                 self.results_table.ROW_HEIGHT + 1,
             )
         )
+        self.window.invalidateCursorRectsForView_(self.results_table)
         self.progress.setDoubleValue_(progress)
         if self._batch_from_drop_zone and self.drop_zone is not None:
             self.drop_zone.batch_progress(index + 1, len(self.pdf_files))
@@ -368,7 +369,9 @@ class PDFCompressorController(FN.NSObject):
     def _finish_compression(self):
         self.processing = False
         summary = BatchSummary.from_metrics(self.metrics)
-        self.status_label.setStringValue_(completion_text(self.metrics))
+        self.status_label.setStringValue_(
+            completion_text(self.metrics, reveal_hint="click a file to show it in Finder")
+        )
         self.add_button.setEnabled_(True)
         self.keep_original.setEnabled_(True)
         self.keep_original.setHidden_(False)

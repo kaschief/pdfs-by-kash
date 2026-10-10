@@ -8,10 +8,11 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable, Mapping
 
-from fs_pdf_compressor.core import format_file_size
+from fs_pdf_compressor.core import display_folder, format_file_size
 
 
-CompressionMetric = Mapping[str, int]
+# original_size / saved_size / new_size are byte counts; output_path is a str.
+CompressionMetric = Mapping[str, int | str]
 
 
 @dataclass(frozen=True)
@@ -50,6 +51,24 @@ class BatchSummary:
         return f"{self.average_reduction:.0f}% smaller"
 
 
-def completion_text(metrics: Iterable[CompressionMetric | None]) -> str:
-    summary = BatchSummary.from_metrics(metrics)
-    return summary.status_text if summary else "Done — no files were reduced"
+def completion_text(
+    metrics: Iterable[CompressionMetric | None], reveal_hint: str | None = None
+) -> str:
+    """Summarise a batch; a single file names its folder and new size.
+
+    ``reveal_hint`` lets a platform UI that supports click-to-reveal append
+    an instruction (e.g. "click a file to show it in Finder").
+    """
+    completed = [metric for metric in metrics if metric is not None]
+    summary = BatchSummary.from_metrics(completed)
+    if summary is None:
+        return "Done — no files were reduced"
+    if len(completed) == 1 and "output_path" in completed[0]:
+        only = completed[0]
+        text = (
+            f"Saved to {display_folder(only['output_path'])} · "
+            f"{format_file_size(only['new_size'])}"
+        )
+    else:
+        text = summary.status_text
+    return f"{text} — {reveal_hint}" if reveal_hint else text

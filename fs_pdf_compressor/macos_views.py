@@ -11,6 +11,8 @@ import AppKit as AK
 import Foundation as FN
 import objc
 
+from fs_pdf_compressor.core import display_folder, format_file_size
+
 
 class DropCanvas(AK.NSView):
     def initWithFrame_controller_(self, frame, controller):
@@ -98,9 +100,10 @@ class DropCanvas(AK.NSView):
 class ResultsTableView(AK.NSView):
     """Result table for completed PDF batches."""
 
-    ROW_HEIGHT = 40.0
+    ROW_HEIGHT = 52.0
     HEADER_HEIGHT = 34.0
     INSET = 12.0
+    VALUE_WIDTH = 120.0
 
     def initWithController_(self, controller):
         self = objc.super(ResultsTableView, self).initWithFrame_(AK.NSZeroRect)
@@ -111,6 +114,7 @@ class ResultsTableView(AK.NSView):
             10.0, AK.NSFontWeightSemibold
         )
         self._body_font = AK.NSFont.systemFontOfSize_(13.0)
+        self._detail_font = AK.NSFont.systemFontOfSize_(11.0)
         self._value_font = AK.NSFont.monospacedDigitSystemFontOfSize_weight_(
             13.0, AK.NSFontWeightMedium
         )
@@ -126,6 +130,12 @@ class ResultsTableView(AK.NSView):
             self._heading_font, muted, right_style
         )
         self._body_attributes = self._text_attributes(self._body_font, ink, left_style)
+        self._detail_left_attributes = self._text_attributes(
+            self._detail_font, muted, left_style
+        )
+        self._detail_right_attributes = self._text_attributes(
+            self._detail_font, muted, right_style
+        )
         self._value_muted_attributes = self._text_attributes(
             self._value_font, muted, right_style
         )
@@ -176,7 +186,7 @@ class ResultsTableView(AK.NSView):
 
         row_left = card.origin.x + 14
         row_right = card.origin.x + card.size.width - 14
-        value_width = 104
+        value_width = self.VALUE_WIDTH
         header_y = card.origin.y + 8
         self._draw_text(
             "FILE",
@@ -184,7 +194,7 @@ class ResultsTableView(AK.NSView):
             self._heading_left_attributes,
         )
         self._draw_text(
-            "REDUCTION",
+            "NEW SIZE",
             AK.NSMakeRect(row_right - value_width, header_y, value_width, 14),
             self._heading_right_attributes,
         )
@@ -210,30 +220,54 @@ class ResultsTableView(AK.NSView):
         )
         for index in range(visible_start, visible_end):
             status = self.controller.statuses[index]
+            metric = self._metric_at(index)
             row_y = separator_y + index * self.ROW_HEIGHT
+            text_width = max(60, card.size.width - value_width - 40)
             filename, marker, result = status.partition("   ↓ ")
             if marker:
-                detail = f"↓ {result}"
+                reduction = f"↓ {result}"
+                if metric and "new_size" in metric:
+                    detail = format_file_size(metric["new_size"])
+                    subdetail = reduction
+                else:
+                    detail, subdetail = reduction, None
                 detail_attributes = self._value_accent_attributes
             else:
                 filename, separator, detail = status.partition(" — ")
                 detail = detail if separator else "Waiting"
+                subdetail = None
                 detail_attributes = self._value_muted_attributes
+
+            location = (
+                f"in {display_folder(metric['output_path'])}"
+                if metric and "output_path" in metric
+                else None
+            )
+            title_y = row_y + (8 if location else 17)
             self._draw_text(
                 filename,
-                AK.NSMakeRect(
-                    row_left,
-                    row_y + 11,
-                    max(60, card.size.width - value_width - 40),
-                    18,
-                ),
+                AK.NSMakeRect(row_left, title_y, text_width, 18),
                 self._body_attributes,
             )
+            if location:
+                self._draw_text(
+                    location,
+                    AK.NSMakeRect(row_left, row_y + 28, text_width, 16),
+                    self._detail_left_attributes,
+                )
             self._draw_text(
                 detail,
-                AK.NSMakeRect(row_right - value_width, row_y + 11, value_width, 18),
+                AK.NSMakeRect(
+                    row_right - value_width, row_y + (8 if subdetail else 17), value_width, 18
+                ),
                 detail_attributes,
             )
+            if subdetail:
+                self._draw_text(
+                    subdetail,
+                    AK.NSMakeRect(row_right - value_width, row_y + 28, value_width, 16),
+                    self._detail_right_attributes,
+                )
             if index < len(self.controller.statuses) - 1:
                 AK.NSColor.separatorColor().setStroke()
                 row_line = AK.NSBezierPath.bezierPath()
@@ -243,3 +277,42 @@ class ResultsTableView(AK.NSView):
                 )
                 row_line.setLineWidth_(1)
                 row_line.stroke()
+
+    # -- Click a finished row to reveal the compressed file in Finder ---------
+
+    def _metric_at(self, index):
+        metrics = getattr(self.controller, "metrics", None) or []
+        return metrics[index] if 0 <= index < len(metrics) else None
+
+    def _row_index_at(self, point):
+        top = self.INSET + self.HEADER_HEIGHT
+        if point.y < top:
+            return None
+        index = int((point.y - top) // self.ROW_HEIGHT)
+        return index if 0 <= index < len(self.controller.statuses) else None
+
+    def _revealable_path(self, index):
+        metric = self._metric_at(index) if index is not None else None
+        return metric.get("output_path") if metric else None
+
+    def mouseDown_(self, event):
+        point = self.convertPoint_fromView_(event.locationInWindow(), None)
+        path = self._revealable_path(self._row_index_at(point))
+        if path:
+            AK.NSWorkspace.sharedWorkspace().activateFileViewerSelectingURLs_(
+                [FN.NSURL.fileURLWithPath_(path)]
+            )
+
+    def resetCursorRects(self):
+        width = self.bounds().size.width
+        for index in range(len(self.controller.statuses)):
+            if self._revealable_path(index):
+                self.addCursorRect_cursor_(
+                    AK.NSMakeRect(
+                        0,
+                        self.INSET + self.HEADER_HEIGHT + index * self.ROW_HEIGHT,
+                        width,
+                        self.ROW_HEIGHT,
+                    ),
+                    AK.NSCursor.pointingHandCursor(),
+                )

@@ -387,7 +387,15 @@ class GhostscriptCommandTests(unittest.TestCase):
 
             self.assertEqual(original.read_bytes(), b"%PDF-1.7\n%%EOF")
             self.assertIn("original.pdf", status)
-            self.assertEqual(metrics, {"original_size": 16, "saved_size": 2})
+            self.assertEqual(
+                metrics,
+                {
+                    "original_size": 16,
+                    "saved_size": 2,
+                    "new_size": 14,
+                    "output_path": str(original.resolve()),
+                },
+            )
             self.assertFalse(Path(f"{original}.temp.pdf").exists())
             move_to_trash.assert_called_once()
 
