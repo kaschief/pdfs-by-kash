@@ -1,12 +1,12 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Copyright (C) 2026 Kaschief
 
-"""Saved preferences (NSUserDefaults keys, defaults and typed access).
+"""Saved preferences (NSUserDefaults keys, factory values, typed access).
 
-These are the *starting* values for each launch. The main window copies them
-when it opens; changes made there last for the session only, so a one-off
-"Replace originals" can never silently become the next launch's behaviour.
-Only the Settings window writes them.
+Settings holds only what has no home on the main screen: the app icon and the
+theme. The main window remembers its own Quality and Save to between launches.
+Originals is deliberately *not* remembered: every launch starts on Keep, so a
+one-off "Replace originals" can never silently carry over.
 """
 
 from __future__ import annotations
@@ -21,10 +21,8 @@ from fs_pdf_compressor.core import QUALITY_PROFILES
 APP_ICON_KEY = "AppIcon"
 THEME_KEY = "Appearance"
 QUALITY_KEY = "QualityIndex"
-ORIGINALS_KEY = "OriginalsMode"
 OUTPUT_FOLDER_KEY = "OutputFolder"
 USE_OUTPUT_FOLDER_KEY = "UseOutputFolder"
-REVEAL_WHEN_DONE_KEY = "RevealWhenDone"
 SKIP_REPLACE_CONFIRMATION_KEY = "SkipReplaceConfirmation"
 
 Theme = Literal["system", "light", "dark"]
@@ -34,20 +32,18 @@ FACTORY_DEFAULTS = {
     APP_ICON_KEY: "squish",
     THEME_KEY: "system",
     QUALITY_KEY: 1,
-    ORIGINALS_KEY: "keep",
     OUTPUT_FOLDER_KEY: "",
     USE_OUTPUT_FOLDER_KEY: False,
-    REVEAL_WHEN_DONE_KEY: False,
 }
 
 
 @dataclass(frozen=True)
-class CompressionDefaults:
+class WindowMemory:
+    """What the main window restores on launch."""
+
     quality_index: int
-    keep_originals: bool
     output_folder: str | None
     use_output_folder: bool
-    reveal_when_done: bool
 
 
 def _defaults():
@@ -56,26 +52,22 @@ def _defaults():
     return defaults
 
 
-def compression_defaults() -> CompressionDefaults:
+def window_memory() -> WindowMemory:
     defaults = _defaults()
-    quality = defaults.integerForKey_(QUALITY_KEY)
     folder = str(defaults.stringForKey_(OUTPUT_FOLDER_KEY) or "") or None
-    return CompressionDefaults(
+    quality = defaults.integerForKey_(QUALITY_KEY)
+    return WindowMemory(
         quality_index=max(0, min(len(QUALITY_PROFILES) - 1, quality)),
-        keep_originals=defaults.stringForKey_(ORIGINALS_KEY) != "replace",
         output_folder=folder,
         use_output_folder=bool(folder) and defaults.boolForKey_(USE_OUTPUT_FOLDER_KEY),
-        reveal_when_done=defaults.boolForKey_(REVEAL_WHEN_DONE_KEY),
     )
 
 
-def save_compression_defaults(value: CompressionDefaults) -> None:
+def remember_window(value: WindowMemory) -> None:
     defaults = _defaults()
     defaults.setInteger_forKey_(value.quality_index, QUALITY_KEY)
-    defaults.setObject_forKey_("keep" if value.keep_originals else "replace", ORIGINALS_KEY)
     defaults.setObject_forKey_(value.output_folder or "", OUTPUT_FOLDER_KEY)
     defaults.setBool_forKey_(value.use_output_folder, USE_OUTPUT_FOLDER_KEY)
-    defaults.setBool_forKey_(value.reveal_when_done, REVEAL_WHEN_DONE_KEY)
 
 
 def theme() -> Theme:

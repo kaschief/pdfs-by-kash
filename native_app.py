@@ -45,16 +45,27 @@ from fs_pdf_compressor.macos_login_item import (
     set_enabled as set_login_item_enabled,
 )
 from fs_pdf_compressor.macos_update_probe import probe_for_update
+from fs_pdf_compressor import macos_theme as theme
+from fs_pdf_compressor.macos_controls import PrimaryButton
 from fs_pdf_compressor.macos_views import (
+    ChromeView,
     DropCanvas,
+    IconButton,
     OptionCard,
+    OptionPanel,
     QueueTableController,
     SelectionBar,
     SettingTile,
-    option_popover,
 )
 from fs_pdf_compressor.version import APP_VERSION
 
+# One short line per quality option card (the long upstream descriptions are
+# kept in core.QUALITY_PROFILES for the other platforms).
+QUALITY_HINTS = (
+    "Print quality, smallest savings.",
+    "Sharp on screen, much smaller.",
+    "Smallest files, visible softening.",
+)
 UPSTREAM_NAME = "FS PDF Compressor"
 UPSTREAM_URL = "https://github.com/gitlares/fs-pdf-compressor"
 REPOSITORY_URL = "https://github.com/kaschief/pdfs-by-kash"
@@ -108,20 +119,18 @@ class PDFCompressorController(FN.NSObject):
 
     @objc.python_method
     def apply_saved_defaults(self):
-        """Start from the Settings defaults; later changes here are session-only."""
-        saved = prefs.compression_defaults()
-        self.quality_index = saved.quality_index
-        self.keep_originals = saved.keep_originals
-        self.output_folder = saved.output_folder
-        self.use_output_folder = saved.use_output_folder
-        self.reveal_when_done = saved.reveal_when_done
+        """Restore Quality and Save to; Originals always starts on Keep."""
+        memory = prefs.window_memory()
+        self.quality_index = memory.quality_index
+        self.output_folder = memory.output_folder
+        self.use_output_folder = memory.use_output_folder
+        self.keep_originals = True
 
     @objc.python_method
-    def settings_changed(self):
-        if self.processing:
-            return
-        self.apply_saved_defaults()
-        self.refresh()
+    def remember(self):
+        prefs.remember_window(
+            prefs.WindowMemory(self.quality_index, self.output_folder, self.use_output_folder)
+        )
 
     # -- Derived state ---------------------------------------------------------------
 
@@ -202,15 +211,8 @@ class PDFCompressorController(FN.NSObject):
 
     @objc.python_method
     def _build_bottom(self):
-        self.bottom = AK.NSVisualEffectView.alloc().initWithFrame_(AK.NSZeroRect)
-        self.bottom.setMaterial_(AK.NSVisualEffectMaterialUnderWindowBackground)
-        self.bottom.setBlendingMode_(AK.NSVisualEffectBlendingModeWithinWindow)
-        self.bottom.setState_(AK.NSVisualEffectStateFollowsWindowActiveState)
+        self.bottom = ChromeView.alloc().initWithFrame_(AK.NSZeroRect)
         self.canvas.addSubview_(self.bottom)
-
-        self.separator = AK.NSBox.alloc().initWithFrame_(AK.NSZeroRect)
-        self.separator.setBoxType_(AK.NSBoxSeparator)
-        self.bottom.addSubview_(self.separator)
 
         self.destination_tile = SettingTile.alloc().initWithKind_caption_symbol_owner_(
             "destination", "Save to", "folder", self
@@ -224,20 +226,15 @@ class PDFCompressorController(FN.NSObject):
         for tile in self.tiles:
             self.bottom.addSubview_(tile)
 
-        self.add_button = AK.NSButton.alloc().initWithFrame_(AK.NSZeroRect)
-        self.add_button.setBezelStyle_(AK.NSBezelStyleRounded)
-        self.add_button.setImage_(
-            AK.NSImage.imageWithSystemSymbolName_accessibilityDescription_("plus", "Add PDFs")
+        self.add_button = IconButton.alloc().initWithSymbol_label_target_action_(
+            "plus", "Add PDFs", self, "chooseFiles:"
         )
-        self.add_button.setImagePosition_(AK.NSImageOnly)
         self.add_button.setToolTip_("Add PDFs")  # icon-only: the one place a label helps
-        self.add_button.setTarget_(self)
-        self.add_button.setAction_("chooseFiles:")
         self.bottom.addSubview_(self.add_button)
 
         self.status_label = AK.NSTextField.labelWithString_("")
         self.status_label.setFont_(AK.NSFont.systemFontOfSize_(12.5))
-        self.status_label.setTextColor_(AK.NSColor.secondaryLabelColor())
+        self.status_label.setTextColor_(theme.INK_2)
         self.status_label.setLineBreakMode_(AK.NSLineBreakByTruncatingTail)
         self.bottom.addSubview_(self.status_label)
 
@@ -251,11 +248,21 @@ class PDFCompressorController(FN.NSObject):
 
         self.clear_button = AK.NSButton.buttonWithTitle_target_action_("Clear", self, "clearList:")
         self.clear_button.setBordered_(False)
-        self.clear_button.setContentTintColor_(AK.NSColor.secondaryLabelColor())
+        self.clear_button.setFocusRingType_(AK.NSFocusRingTypeNone)
+        self.clear_button.setAttributedTitle_(
+            AK.NSAttributedString.alloc().initWithString_attributes_(
+                "Clear",
+                {
+                    AK.NSForegroundColorAttributeName: theme.INK_2,
+                    AK.NSFontAttributeName: AK.NSFont.systemFontOfSize_weight_(13, AK.NSFontWeightMedium),
+                },
+            )
+        )
         self.bottom.addSubview_(self.clear_button)
 
-        self.compress_button = AK.NSButton.buttonWithTitle_target_action_("Compress", self, "compress:")
-        self.compress_button.setBezelStyle_(AK.NSBezelStyleRounded)
+        self.compress_button = PrimaryButton.alloc().initWithTitle_target_action_(
+            "Compress", self, "compress:"
+        )
         self.compress_button.setKeyEquivalent_("\r")
         self.bottom.addSubview_(self.compress_button)
 
@@ -270,7 +277,6 @@ class PDFCompressorController(FN.NSObject):
         footer = self.FOOTER_HEIGHT
 
         self.bottom.setFrame_(AK.NSMakeRect(0, 0, width, bottom_height))
-        self.separator.setFrame_(AK.NSMakeRect(0, bottom_height - 1, width, 1))
         self.results_scroll.setFrame_(
             AK.NSMakeRect(0, bottom_height, width, height - bottom_height)
         )
@@ -286,7 +292,7 @@ class PDFCompressorController(FN.NSObject):
             x += tile_width + gap
 
         control_y = (footer - 28) / 2
-        self.add_button.setFrame_(AK.NSMakeRect(14, control_y, 34, 28))
+        self.add_button.setFrame_(AK.NSMakeRect(14, control_y, 30, 28))
         right = width - 14
         self.compress_button.setFrame_(
             AK.NSMakeRect(right - self.COMPRESS_WIDTH, control_y, self.COMPRESS_WIDTH, 28)
@@ -377,28 +383,26 @@ class PDFCompressorController(FN.NSObject):
         if self.processing:
             return
         if self.popover is not None:
-            self.popover.close()
+            self.popover.dismiss()
         cards = getattr(self, f"_{tile.kind}_cards")()
-        self.popover = option_popover(cards, self)
+
+        def closed():
+            tile.open = False
+            tile.setNeedsDisplay_(True)
+            self.popover = None
+
+        self.popover = OptionPanel.alloc().initWithCards_onClose_(cards, closed)
         tile.open = True
         tile.setNeedsDisplay_(True)
-        self.popover_tile = tile
-        self.popover.showRelativeToRect_ofView_preferredEdge_(
-            tile.bounds(), tile, AK.NSRectEdgeMaxY
-        )
-
-    def popoverDidClose_(self, notification):
-        if getattr(self, "popover_tile", None) is not None:
-            self.popover_tile.open = False
-            self.popover_tile.setNeedsDisplay_(True)
-        self.popover = None
+        self.popover.show_above(tile)
 
     @objc.python_method
     def _pick(self, apply):
         def picked():
             apply()
+            self.remember()
             if self.popover is not None:
-                self.popover.close()
+                self.popover.dismiss()
             self.refresh()
 
         return picked
@@ -414,7 +418,7 @@ class PDFCompressorController(FN.NSObject):
         return [
             OptionCard.alloc().initWithTitle_detail_symbol_selected_warn_action_(
                 "Keep originals",
-                "Saves a compressed copy. Your files are never touched.",
+                "Your files stay untouched.",
                 "square.on.square",
                 self.keep_originals,
                 False,
@@ -422,7 +426,6 @@ class PDFCompressorController(FN.NSObject):
             ),
             OptionCard.alloc().initWithTitle_detail_symbol_selected_warn_action_(
                 "Replace originals",
-                "Overwrites each file once its smaller version checks out. "
                 "Old versions go to the Trash.",
                 "arrow.triangle.2.circlepath",
                 not self.keep_originals,
@@ -434,7 +437,7 @@ class PDFCompressorController(FN.NSObject):
     @objc.python_method
     def _quality_cards(self):
         cards = []
-        for index, (label, _, description) in enumerate(QUALITY_PROFILES):
+        for index, description in enumerate(QUALITY_HINTS):
 
             def choose(index=index):
                 self.quality_index = index
@@ -462,7 +465,7 @@ class PDFCompressorController(FN.NSObject):
         cards = [
             OptionCard.alloc().initWithTitle_detail_symbol_selected_warn_action_(
                 "Next to each original",
-                "Saved beside the original as “name compressed.pdf”.",
+                "Saved as “name compressed.pdf”.",
                 "folder",
                 not self.effective_output_dir(),
                 False,
@@ -490,7 +493,7 @@ class PDFCompressorController(FN.NSObject):
     @objc.python_method
     def _choose_folder(self):
         if self.popover is not None:
-            self.popover.close()
+            self.popover.dismiss()
         panel = AK.NSOpenPanel.openPanel()
         panel.setCanChooseFiles_(False)
         panel.setCanChooseDirectories_(True)
@@ -502,6 +505,7 @@ class PDFCompressorController(FN.NSObject):
         if panel.runModal() == AK.NSModalResponseOK:
             self.output_folder = str(panel.URL().path())
             self.use_output_folder = True
+            self.remember()
         self.refresh()
 
     # -- Adding files ------------------------------------------------------------------
@@ -548,6 +552,7 @@ class PDFCompressorController(FN.NSObject):
 
     def show_main_window(self):
         self.window.makeKeyAndOrderFront_(None)
+        self.window.makeFirstResponder_(None)  # no focus ring until the user Tabs
         AK.NSApp.activateIgnoringOtherApps_(True)
 
     def chooseFiles_(self, sender):
@@ -662,7 +667,7 @@ class PDFCompressorController(FN.NSObject):
         if not self.keep_originals and not self._confirm_replace(len(self.queue.ready_paths)):
             return
         if self.popover is not None:
-            self.popover.close()
+            self.popover.dismiss()
         self.batch_paths = self.queue.queue_ready()
         self.batch_done = 0
         self.processing = True
@@ -739,10 +744,6 @@ class PDFCompressorController(FN.NSObject):
         ]
         self.batch_paths = []
         self.refresh()
-        if self.reveal_when_done and finished:
-            AK.NSWorkspace.sharedWorkspace().activateFileViewerSelectingURLs_(
-                [FN.NSURL.fileURLWithPath_(i.state.output_path) for i in finished]
-            )
         if self.drop_zone is not None:
             self.drop_zone.batch_finished(BatchSummary.from_metrics(metrics))
 
@@ -770,8 +771,7 @@ class AppDelegate(FN.NSObject):
             DROP_ZONE_DEFAULTS_KEY
         ):
             self._set_drop_zone_enabled(True)
-        self.controller.window.makeKeyAndOrderFront_(None)
-        AK.NSApp.activateIgnoringOtherApps_(True)
+        self.controller.show_main_window()
         if self._pending_quick_action_paths:
             self.controller.add_paths(self._pending_quick_action_paths)
             self._pending_quick_action_paths = []
@@ -967,15 +967,8 @@ class AppDelegate(FN.NSObject):
 
     def showSettings_(self, sender):
         if self.settings_controller is None:
-            self.settings_controller = SettingsWindowController.alloc().initWithOnChange_(
-                self._settings_changed
-            )
+            self.settings_controller = SettingsWindowController.alloc().init()
         self.settings_controller.show()
-
-    @objc.python_method
-    def _settings_changed(self, kind):
-        if kind == "compression" and self.controller is not None:
-            self.controller.settings_changed()
 
     def showAbout_(self, sender):
         text = (
@@ -1106,7 +1099,7 @@ class AppDelegate(FN.NSObject):
 def main():
     # Tooltips only carry secondary detail (full paths, icon-only buttons, why
     # something is disabled), so they wait a beat instead of popping instantly.
-    FN.NSUserDefaults.standardUserDefaults().registerDefaults_({"NSInitialToolTipDelay": 700})
+    FN.NSUserDefaults.standardUserDefaults().registerDefaults_({"NSInitialToolTipDelay": theme.TOOLTIP_DELAY_MS})
     application = AK.NSApplication.sharedApplication()
     application.setActivationPolicy_(AK.NSApplicationActivationPolicyRegular)
     delegate = AppDelegate.alloc().init()

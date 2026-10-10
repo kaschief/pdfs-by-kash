@@ -2,7 +2,11 @@
 # Copyright (C) 2026 Daniel Lares
 # Modifications Copyright (C) 2026 Kaschief
 
-"""AppKit views used by the main Pdfs by Kash window."""
+"""AppKit views used by the main Pdfs by Kash window.
+
+Every colour, border, radius and focus treatment comes from macos_theme, so
+the window matches the approved mockups regardless of the system accent.
+"""
 
 from __future__ import annotations
 
@@ -11,7 +15,9 @@ import os
 import AppKit as AK
 import Foundation as FN
 import objc
+import Quartz
 
+from fs_pdf_compressor import macos_theme as theme
 from fs_pdf_compressor.compression_queue import (
     Compressed,
     Compressing,
@@ -20,6 +26,7 @@ from fs_pdf_compressor.compression_queue import (
     Unchanged,
 )
 from fs_pdf_compressor.core import display_folder, format_file_size
+from fs_pdf_compressor.macos_controls import is_focused, keyboard_focus_allowed
 
 
 class DropCanvas(AK.NSView):
@@ -36,79 +43,49 @@ class DropCanvas(AK.NSView):
 
     def drawRect_(self, dirty_rect):
         bounds = self.bounds()
-        AK.NSColor.windowBackgroundColor().setFill()
-        AK.NSBezierPath.fillRect_(bounds)
+        theme.WINDOW.setFill()
+        AK.NSRectFill(bounds)
 
         bottom = self.controller.bottom_chrome_height()
         if self.controller.showing_results:
             if self.drag_active:
-                AK.NSColor.controlAccentColor().colorWithAlphaComponent_(0.6).setStroke()
-                ring = AK.NSBezierPath.bezierPathWithRoundedRect_xRadius_yRadius_(
-                    AK.NSInsetRect(
-                        AK.NSMakeRect(0, bottom, bounds.size.width, bounds.size.height - bottom),
-                        4,
-                        4,
-                    ),
-                    10,
-                    10,
-                )
-                ring.setLineWidth_(2.0)
-                ring.stroke()
+                list_area = AK.NSMakeRect(0, bottom, bounds.size.width, bounds.size.height - bottom)
+                theme.stroke_inside(AK.NSInsetRect(list_area, 6, 6), theme.RADIUS_TILE, theme.ACCENT_RING, 2.0)
             return
 
         available_height = max(0.0, bounds.size.height - bottom)
-        side = min(160.0, bounds.size.width * 0.3, available_height * 0.5)
+        side = min(150.0, bounds.size.width * 0.28, available_height * 0.5)
         target = AK.NSMakeRect(
             (bounds.size.width - side) / 2,
             bottom + (available_height - side) / 2 + 14,
             side,
             side,
         )
-
-        border_color = (
-            AK.NSColor.controlAccentColor().colorWithAlphaComponent_(0.55)
-            if self.drag_active
-            else AK.NSColor.quaternaryLabelColor()
-        )
-        border_color.setStroke()
-        border = AK.NSBezierPath.bezierPathWithRoundedRect_xRadius_yRadius_(
-            target, 19, 19
-        )
-        border.setLineWidth_(2.0)
-        border.setLineDash_count_phase_([7.0, 6.0], 2, 0.0)
+        border = theme.rounded(target, 18)
+        border.setLineWidth_(1.5)
+        border.setLineDash_count_phase_([6.0, 6.0], 2, 0.0)
+        (theme.ACCENT_RING if self.drag_active else theme.FAINT).setStroke()
         border.stroke()
 
-        arrow_color = (
-            AK.NSColor.controlAccentColor().colorWithAlphaComponent_(0.72)
-            if self.drag_active
-            else AK.NSColor.tertiaryLabelColor()
-        )
-        arrow_color.setStroke()
-        center_x = AK.NSMidX(target)
-        center_y = AK.NSMidY(target)
+        (theme.ACCENT if self.drag_active else theme.FAINT).setStroke()
+        cx, cy = AK.NSMidX(target), AK.NSMidY(target)
         arrow = AK.NSBezierPath.bezierPath()
-        arrow.setLineWidth_(3.0)
+        arrow.setLineWidth_(2.5)
         arrow.setLineCapStyle_(AK.NSLineCapStyleRound)
         arrow.setLineJoinStyle_(AK.NSLineJoinStyleRound)
-        arrow.moveToPoint_(AK.NSMakePoint(center_x, center_y + 30))
-        arrow.lineToPoint_(AK.NSMakePoint(center_x, center_y - 19))
-        arrow.moveToPoint_(AK.NSMakePoint(center_x - 18, center_y - 2))
-        arrow.lineToPoint_(AK.NSMakePoint(center_x, center_y - 21))
-        arrow.lineToPoint_(AK.NSMakePoint(center_x + 18, center_y - 2))
+        arrow.moveToPoint_(AK.NSMakePoint(cx, cy + 26))
+        arrow.lineToPoint_(AK.NSMakePoint(cx, cy - 17))
+        arrow.moveToPoint_(AK.NSMakePoint(cx - 15, cy - 2))
+        arrow.lineToPoint_(AK.NSMakePoint(cx, cy - 19))
+        arrow.lineToPoint_(AK.NSMakePoint(cx + 15, cy - 2))
         arrow.stroke()
 
-        style = AK.NSMutableParagraphStyle.alloc().init()
-        style.setAlignment_(AK.NSTextAlignmentCenter)
-        hint = FN.NSString.stringWithString_(
-            "Drop PDFs or folders here, or click + to choose files"
-        )
-        hint.drawInRect_withAttributes_(
+        _text(
+            "Drop PDFs or folders here, or click + to choose files",
             AK.NSMakeRect(0, target.origin.y - 34, bounds.size.width, 18),
-            {
-                AK.NSFontAttributeName: AK.NSFont.systemFontOfSize_(12.0),
-                AK.NSForegroundColorAttributeName: AK.NSColor.secondaryLabelColor(),
-                AK.NSParagraphStyleAttributeName: style,
-            },
+            AK.NSFont.systemFontOfSize_(12.5),
+            theme.MUTED,
+            AK.NSTextAlignmentCenter,
         )
 
     def draggingEntered_(self, sender):
@@ -134,6 +111,48 @@ class DropCanvas(AK.NSView):
         return bool(urls)
 
 
+class ChromeView(AK.NSView):
+    """The lavender-tinted bottom bar with a single hairline on top."""
+
+    def drawRect_(self, rect):
+        bounds = self.bounds()
+        theme.CHROME.setFill()
+        AK.NSRectFill(bounds)
+        theme.HAIRLINE.setFill()
+        AK.NSRectFill(AK.NSMakeRect(0, bounds.size.height - 1, bounds.size.width, 1))
+
+
+class IconButton(AK.NSButton):
+    """Square control-coloured button with a hairline (the + button)."""
+
+    def initWithSymbol_label_target_action_(self, symbol, label, target, action):
+        self = objc.super(IconButton, self).initWithFrame_(AK.NSZeroRect)
+        if self is None:
+            return None
+        self.symbol_image = _symbol(symbol, label, 13, AK.NSFontWeightMedium)
+        self.setTitle_("")
+        self.setBordered_(False)
+        self.setTarget_(target)
+        self.setAction_(action)
+        self.setFocusRingType_(AK.NSFocusRingTypeNone)
+        self.setAccessibilityLabel_(label)
+        return self
+
+    def acceptsFirstResponder(self):
+        return keyboard_focus_allowed()
+
+    def drawRect_(self, rect):
+        bounds = self.bounds()
+        theme.CONTROL.setFill()
+        theme.rounded(bounds, theme.RADIUS_CONTROL).fill()
+        if self.isHighlighted():
+            theme.HOVER.setFill()
+            theme.rounded(bounds, theme.RADIUS_CONTROL).fill()
+        theme.stroke_inside(bounds, theme.RADIUS_CONTROL, theme.CONTROL_RING, theme.HAIRLINE_WIDTH)
+        _draw_tinted_symbol(self.symbol_image, bounds, theme.INK_2)
+        if is_focused(self):
+            theme.draw_focus_ring(bounds, theme.RADIUS_CONTROL)
+
 
 # -- Shared drawing helpers ----------------------------------------------------------
 
@@ -149,18 +168,20 @@ def _symbol(name, description, size=13.0, weight=None):
 
 
 def _draw_tinted_symbol(image, rect, color):
-    """Draw a template SF Symbol in ``color`` (works in both appearances)."""
+    """Draw a template SF Symbol in ``color`` (resolved for the current appearance)."""
     if image is None:
         return
-    tinted = image.copy()
-    tinted.lockFocus()
-    color.set()
-    AK.NSRectFillUsingOperation(
-        AK.NSMakeRect(0, 0, tinted.size().width, tinted.size().height),
-        AK.NSCompositingOperationSourceAtop,
-    )
-    tinted.unlockFocus()
     size = image.size()
+    tinted = AK.NSImage.imageWithSize_flipped_drawingHandler_(
+        size,
+        False,
+        lambda dst: (
+            image.drawInRect_(dst),
+            color.set(),
+            AK.NSRectFillUsingOperation(dst, AK.NSCompositingOperationSourceAtop),
+            True,
+        )[-1],
+    )
     target = AK.NSMakeRect(
         rect.origin.x + (rect.size.width - size.width) / 2,
         rect.origin.y + (rect.size.height - size.height) / 2,
@@ -199,16 +220,11 @@ def _hover_tracking(view):
     )
 
 
-WARN = AK.NSColor.systemOrangeColor
-FAIL = AK.NSColor.systemRedColor
-OK = AK.NSColor.systemGreenColor
-
-
 # -- Setting tiles (direction A) -----------------------------------------------------
 
 
 class SettingTile(AK.NSView):
-    """Icon + caption + value-in-words. Opens a popover of option cards on click.
+    """Icon + caption + value-in-words; opens an option panel on click.
 
     Fixed width (set by the window), so a value change never reflows the row.
     ``mode``: "normal", "warn" (Replace) or "off" (not used right now).
@@ -246,7 +262,7 @@ class SettingTile(AK.NSView):
         self.setNeedsDisplay_(True)
 
     def acceptsFirstResponder(self):
-        return self.mode != "off"
+        return self.mode != "off" and keyboard_focus_allowed()
 
     def becomeFirstResponder(self):
         self.setNeedsDisplay_(True)
@@ -256,19 +272,13 @@ class SettingTile(AK.NSView):
         self.setNeedsDisplay_(True)
         return True
 
-    def drawFocusRingMask(self):
-        AK.NSBezierPath.bezierPathWithRoundedRect_xRadius_yRadius_(self.bounds(), 10, 10).fill()
-
-    def focusRingMaskBounds(self):
-        return self.bounds()
-
     def accessibilityPerformPress(self):
-        self.mouseDown_(None)
+        self.target_controller.open_setting(self)
         return True
 
     def keyDown_(self, event):
-        if (event.charactersIgnoringModifiers() or "") in (" ", "\r"):
-            self.mouseDown_(None)
+        if (event.charactersIgnoringModifiers() or "") in (" ", "\r", ""):
+            self.target_controller.open_setting(self)
         else:
             objc.super(SettingTile, self).keyDown_(event)
 
@@ -282,76 +292,66 @@ class SettingTile(AK.NSView):
 
     def mouseDown_(self, event):
         if self.mode != "off":
-            self.window().makeFirstResponder_(self)
             self.target_controller.open_setting(self)
 
     def drawRect_(self, rect):
-        bounds = AK.NSInsetRect(self.bounds(), 0.5, 0.5)
+        bounds = self.bounds()
         off = self.mode == "off"
-        card = AK.NSBezierPath.bezierPathWithRoundedRect_xRadius_yRadius_(bounds, 10, 10)
-        accent = AK.NSColor.controlAccentColor()
         if not off:
-            AK.NSColor.controlBackgroundColor().setFill()
-            card.fill()
-        ring = (
-            accent.colorWithAlphaComponent_(0.55)
-            if (self.hovered or self.open) and not off
-            else AK.NSColor.separatorColor()
+            theme.CONTROL.setFill()
+            theme.rounded(bounds, theme.RADIUS_TILE).fill()
+        active = (self.hovered or self.open) and not off
+        theme.stroke_inside(
+            bounds,
+            theme.RADIUS_TILE,
+            theme.ACCENT_RING if active else theme.CONTROL_RING,
+            theme.HAIRLINE_WIDTH,
         )
-        ring.setStroke()
-        card.setLineWidth_(1.0)
-        card.stroke()
 
-        height = self.bounds().size.height
+        height = bounds.size.height
         chip = AK.NSMakeRect(10, (height - 26) / 2, 26, 26)
-        chip_path = AK.NSBezierPath.bezierPathWithRoundedRect_xRadius_yRadius_(chip, 7, 7)
         if off:
-            AK.NSColor.labelColor().colorWithAlphaComponent_(0.05).setFill()
-            glyph = AK.NSColor.tertiaryLabelColor()
+            chip_fill, glyph = theme.TRACK, theme.FAINT
         elif self.mode == "warn":
-            WARN().colorWithAlphaComponent_(0.14).setFill()
-            glyph = WARN()
+            chip_fill, glyph = theme.WARN_SOFT, theme.WARN
         else:
-            accent.colorWithAlphaComponent_(0.13).setFill()
-            glyph = accent
-        chip_path.fill()
+            chip_fill, glyph = theme.ACCENT_SOFT, theme.ACCENT
+        chip_fill.setFill()
+        theme.rounded(chip, 7).fill()
         _draw_tinted_symbol(self.symbol, chip, glyph)
 
         text_x = 46
         chevron_space = 0 if off else 22
-        text_width = max(10, self.bounds().size.width - text_x - chevron_space - 6)
+        text_width = max(10, bounds.size.width - text_x - chevron_space - 6)
         _text(
             self.caption,
             AK.NSMakeRect(text_x, height / 2 - 16, text_width, 14),
             AK.NSFont.systemFontOfSize_(10.5),
-            AK.NSColor.tertiaryLabelColor() if off else AK.NSColor.secondaryLabelColor(),
-        )
-        value_color = (
-            AK.NSColor.tertiaryLabelColor()
-            if off
-            else WARN()
-            if self.mode == "warn"
-            else AK.NSColor.labelColor()
+            theme.FAINT if off else theme.MUTED,
         )
         _text(
             self.value,
             AK.NSMakeRect(text_x, height / 2 - 2, text_width, 17),
             AK.NSFont.systemFontOfSize_weight_(12.5, AK.NSFontWeightMedium),
-            value_color,
+            theme.FAINT if off else theme.WARN if self.mode == "warn" else theme.INK,
         )
         if not off:
-            chevron = _symbol("chevron.up" if self.open else "chevron.down", "", 9.5, AK.NSFontWeightSemibold)
+            chevron = _symbol(
+                "chevron.up" if self.open else "chevron.down", "", 9.5, AK.NSFontWeightSemibold
+            )
             _draw_tinted_symbol(
                 chevron,
-                AK.NSMakeRect(self.bounds().size.width - 24, 0, 14, height),
-                accent if self.open else AK.NSColor.tertiaryLabelColor(),
+                AK.NSMakeRect(bounds.size.width - 24, 0, 14, height),
+                theme.ACCENT if self.open else theme.MUTED,
             )
+        if is_focused(self):
+            theme.draw_focus_ring(bounds, theme.RADIUS_TILE)
 
 
 class OptionCard(AK.NSView):
-    """A choice inside a settings popover: icon, title, one-line explanation."""
+    """A choice inside an option panel: icon chip, title, at most one short line."""
 
-    WIDTH = 300.0
+    WIDTH = 288.0
 
     def initWithTitle_detail_symbol_selected_warn_action_(self, title, detail, symbol, selected, warn, action):
         self = objc.super(OptionCard, self).initWithFrame_(AK.NSMakeRect(0, 0, self.WIDTH, 10))
@@ -367,26 +367,14 @@ class OptionCard(AK.NSView):
         self.setAccessibilityElement_(True)
         self.setAccessibilityRole_(AK.NSAccessibilityRadioButtonRole)
         self.setAccessibilityLabel_(title)
-        self.setAccessibilityHelp_(self.detail)
+        if self.detail:
+            self.setAccessibilityHelp_(self.detail)
         _hover_tracking(self)
-        height = 22 + (self._detail_height() if self.detail else 0) + 16
-        self.setFrameSize_(AK.NSMakeSize(self.WIDTH, max(42, height)))
+        self.setFrameSize_(AK.NSMakeSize(self.WIDTH, 52 if self.detail else 40))
         return self
-
-    @objc.python_method
-    def _detail_height(self):
-        rect = FN.NSString.stringWithString_(self.detail).boundingRectWithSize_options_attributes_(
-            AK.NSMakeSize(self.WIDTH - 56, 1000),
-            AK.NSStringDrawingUsesLineFragmentOrigin,
-            {AK.NSFontAttributeName: AK.NSFont.systemFontOfSize_(11.5)},
-        )
-        return rect.size.height + 2
 
     def isFlipped(self):
         return True
-
-    def intrinsicContentSize(self):
-        return self.frame().size
 
     def accessibilityValue(self):
         return 1 if self.selected else 0
@@ -396,19 +384,26 @@ class OptionCard(AK.NSView):
         return True
 
     def acceptsFirstResponder(self):
+        return keyboard_focus_allowed()
+
+    def becomeFirstResponder(self):
+        self.setNeedsDisplay_(True)
+        return True
+
+    def resignFirstResponder(self):
+        self.setNeedsDisplay_(True)
         return True
 
     def keyDown_(self, event):
-        if (event.charactersIgnoringModifiers() or "") in (" ", "\r"):
+        key = event.charactersIgnoringModifiers() or ""
+        if key in (" ", "\r"):
             self.action()
+        elif key == "":
+            self.window().selectNextKeyView_(self)
+        elif key == "":
+            self.window().selectPreviousKeyView_(self)
         else:
             objc.super(OptionCard, self).keyDown_(event)
-
-    def drawFocusRingMask(self):
-        AK.NSBezierPath.bezierPathWithRoundedRect_xRadius_yRadius_(self.bounds(), 9, 9).fill()
-
-    def focusRingMaskBounds(self):
-        return self.bounds()
 
     def mouseEntered_(self, event):
         self.hovered = True
@@ -418,81 +413,145 @@ class OptionCard(AK.NSView):
         self.hovered = False
         self.setNeedsDisplay_(True)
 
-    def mouseUp_(self, event):
-        self.action()
-
     def mouseDown_(self, event):
         pass
 
+    def mouseUp_(self, event):
+        point = self.convertPoint_fromView_(event.locationInWindow(), None)
+        if AK.NSPointInRect(point, self.bounds()):
+            self.action()
+
     def drawRect_(self, rect):
         bounds = self.bounds()
-        path = AK.NSBezierPath.bezierPathWithRoundedRect_xRadius_yRadius_(AK.NSInsetRect(bounds, 1, 1), 9, 9)
-        tone = WARN() if self.warn else AK.NSColor.controlAccentColor()
+        soft, ring, solid = (
+            (theme.WARN_SOFT, theme.WARN_RING, theme.WARN)
+            if self.warn
+            else (theme.ACCENT_SOFT, theme.ACCENT_RING, theme.ACCENT)
+        )
         if self.selected:
-            tone.colorWithAlphaComponent_(0.11).setFill()
-            path.fill()
-            tone.colorWithAlphaComponent_(0.45).setStroke()
-            path.setLineWidth_(1.5)
-            path.stroke()
+            soft.setFill()
+            theme.rounded(bounds, theme.RADIUS_CARD).fill()
+            theme.stroke_inside(bounds, theme.RADIUS_CARD, ring, theme.SELECTED_RING_WIDTH)
         elif self.hovered:
-            AK.NSColor.labelColor().colorWithAlphaComponent_(0.05).setFill()
-            path.fill()
+            theme.HOVER.setFill()
+            theme.rounded(bounds, theme.RADIUS_CARD).fill()
 
-        chip = AK.NSMakeRect(10, 9, 26, 26)
-        chip_path = AK.NSBezierPath.bezierPathWithRoundedRect_xRadius_yRadius_(chip, 7, 7)
-        if self.selected:
-            tone.setFill()
-            glyph = AK.NSColor.whiteColor()
-        else:
-            AK.NSColor.labelColor().colorWithAlphaComponent_(0.07).setFill()
-            glyph = AK.NSColor.secondaryLabelColor()
+        chip = AK.NSMakeRect(10, (bounds.size.height - 26) / 2, 26, 26)
         if self.symbol is not None:
-            chip_path.fill()
-            _draw_tinted_symbol(self.symbol, chip, glyph)
-
+            (solid if self.selected else theme.TRACK).setFill()
+            theme.rounded(chip, 7).fill()
+            _draw_tinted_symbol(
+                self.symbol, chip, AK.NSColor.whiteColor() if self.selected else theme.INK_2
+            )
+        title_y = 9 if self.detail else (bounds.size.height - 17) / 2
         _text(
             self.title,
-            AK.NSMakeRect(46, 9, bounds.size.width - 56, 17),
+            AK.NSMakeRect(46, title_y, bounds.size.width - 56, 17),
             AK.NSFont.systemFontOfSize_weight_(13.0, AK.NSFontWeightSemibold),
-            AK.NSColor.labelColor(),
+            theme.INK,
         )
         if self.detail:
-            style = AK.NSMutableParagraphStyle.alloc().init()
-            style.setLineSpacing_(1.0)
-            FN.NSString.stringWithString_(self.detail).drawInRect_withAttributes_(
-                AK.NSMakeRect(46, 27, bounds.size.width - 56, bounds.size.height - 30),
-                {
-                    AK.NSFontAttributeName: AK.NSFont.systemFontOfSize_(11.5),
-                    AK.NSForegroundColorAttributeName: AK.NSColor.secondaryLabelColor(),
-                    AK.NSParagraphStyleAttributeName: style,
-                },
+            _text(
+                self.detail,
+                AK.NSMakeRect(46, 27, bounds.size.width - 56, 16),
+                AK.NSFont.systemFontOfSize_(11.5),
+                theme.MUTED,
             )
+        if is_focused(self):
+            theme.draw_focus_ring(bounds, theme.RADIUS_CARD)
 
 
-class _CallbackViewController(AK.NSViewController):
-    def loadView(self):
-        pass
+class _OptionCardView(AK.NSView):
+    """The opaque floating card: token surface, hairline, rounded corners."""
+
+    def isFlipped(self):
+        return True
+
+    def drawRect_(self, rect):
+        bounds = self.bounds()
+        theme.FLOAT.setFill()
+        theme.rounded(bounds, 12).fill()
+        theme.stroke_inside(bounds, 12, theme.CONTROL_RING, theme.HAIRLINE_WIDTH)
 
 
-def option_popover(cards, delegate):
-    """Wrap OptionCards in a transient NSPopover."""
-    stack = AK.NSStackView.stackViewWithViews_(cards)
-    stack.setOrientation_(AK.NSUserInterfaceLayoutOrientationVertical)
-    stack.setSpacing_(4)
-    stack.setEdgeInsets_(AK.NSEdgeInsetsMake(8, 8, 8, 8))
-    for card in cards:
-        card.widthAnchor().constraintEqualToConstant_(OptionCard.WIDTH).setActive_(True)
-        card.heightAnchor().constraintEqualToConstant_(card.frame().size.height).setActive_(True)
-    stack.setFrameSize_(stack.fittingSize())
-    controller = _CallbackViewController.alloc().init()
-    controller.setView_(stack)
-    popover = AK.NSPopover.alloc().init()
-    popover.setBehavior_(AK.NSPopoverBehaviorTransient)
-    popover.setAnimates_(True)
-    popover.setContentViewController_(controller)
-    popover.setContentSize_(stack.fittingSize())
-    popover.setDelegate_(delegate)
-    return popover
+class OptionPanel(AK.NSPanel):
+    """An opaque option card anchored above a setting tile.
+
+    Replaces NSPopover, whose see-through material picked up the desktop behind
+    the window and made the selected option unreadable. Closes on a click
+    elsewhere, Esc, or picking an option.
+    """
+
+    def initWithCards_onClose_(self, cards, on_close):
+        padding, spacing = 6.0, 4.0
+        height = padding * 2 + sum(c.frame().size.height for c in cards) + spacing * (len(cards) - 1)
+        width = OptionCard.WIDTH + padding * 2
+        self = objc.super(OptionPanel, self).initWithContentRect_styleMask_backing_defer_(
+            AK.NSMakeRect(0, 0, width, height),
+            AK.NSWindowStyleMaskBorderless,
+            AK.NSBackingStoreBuffered,
+            False,
+        )
+        if self is None:
+            return None
+        self.on_close = on_close
+        self.closing = False
+        self.setOpaque_(False)
+        self.setBackgroundColor_(AK.NSColor.clearColor())
+        self.setHasShadow_(True)
+        self.setReleasedWhenClosed_(False)
+        content = _OptionCardView.alloc().initWithFrame_(AK.NSMakeRect(0, 0, width, height))
+        content.setWantsLayer_(True)
+        content.layer().setCornerRadius_(12)
+        content.layer().setMasksToBounds_(True)
+        y = padding
+        for card in cards:
+            card.setFrameOrigin_(AK.NSMakePoint(padding, y))
+            content.addSubview_(card)
+            y += card.frame().size.height + spacing
+        for current, following in zip(cards, cards[1:] + cards[:1]):
+            current.setNextKeyView_(following)
+        self.setContentView_(content)
+        self.cards = cards
+        return self
+
+    def canBecomeKeyWindow(self):
+        return True
+
+    @objc.python_method
+    def show_above(self, tile):
+        parent = tile.window()
+        tile_in_window = tile.convertRect_toView_(tile.bounds(), None)
+        tile_on_screen = parent.convertRectToScreen_(tile_in_window)
+        frame = self.frame()
+        origin = AK.NSMakePoint(
+            tile_on_screen.origin.x,
+            tile_on_screen.origin.y + tile_on_screen.size.height + 6,
+        )
+        self.setFrameOrigin_(origin)
+        self.setAppearance_(parent.effectiveAppearance())
+        parent.addChildWindow_ordered_(self, AK.NSWindowAbove)
+        self.makeKeyAndOrderFront_(None)
+        return frame
+
+    def resignKeyWindow(self):
+        objc.super(OptionPanel, self).resignKeyWindow()
+        self.dismiss()
+
+    def cancelOperation_(self, sender):
+        self.dismiss()
+
+    @objc.python_method
+    def dismiss(self):
+        if self.closing:
+            return
+        self.closing = True
+        parent = self.parentWindow()
+        if parent is not None:
+            parent.removeChildWindow_(self)
+            parent.makeKeyWindow()
+        self.orderOut_(None)
+        self.on_close()
 
 
 # -- Floating selection bar ------------------------------------------------------------
@@ -515,7 +574,7 @@ class SelectionBar(AK.NSView):
         self.label.setFont_(AK.NSFont.systemFontOfSize_weight_(12.5, AK.NSFontWeightSemibold))
         self.buttons = []
         for title, symbol, action in (
-            ("Show in Finder", "folder", "revealSelection:"),
+            ("Show in Finder", "finder", "revealSelection:"),
             ("Remove", "trash", "removeSelection:"),
             ("Done", None, "clearSelection:"),
         ):
@@ -523,7 +582,7 @@ class SelectionBar(AK.NSView):
             button.setBordered_(False)
             button.setFont_(AK.NSFont.systemFontOfSize_(12.5))
             if symbol:
-                button.setImage_(_symbol(symbol, title, 12))
+                button.setImage_(_symbol(symbol, title, 12) or _symbol("folder", title, 12))
                 button.setImagePosition_(AK.NSImageLeading)
             self.buttons.append(button)
         stack = AK.NSStackView.stackViewWithViews_([self.label] + self.buttons)
@@ -543,28 +602,21 @@ class SelectionBar(AK.NSView):
         self.setAccessibilityLabel_("Selection actions")
         return self
 
-    def updateLayer(self):
-        dark = self.effectiveAppearance().bestMatchFromAppearancesWithNames_(
-            [AK.NSAppearanceNameAqua, AK.NSAppearanceNameDarkAqua]
-        ) == AK.NSAppearanceNameDarkAqua
-        background = AK.NSColor.colorWithSRGBRed_green_blue_alpha_(
-            *((0.94, 0.94, 0.99, 1) if dark else (0.12, 0.11, 0.23, 1))
-        )
-        ink = AK.NSColor.colorWithSRGBRed_green_blue_alpha_(
-            *((0.09, 0.09, 0.17, 1) if dark else (0.94, 0.94, 0.99, 1))
-        )
-        self.layer().setBackgroundColor_(background.CGColor())
-        self.label.setTextColor_(ink)
-        for button in self.buttons:
-            button.setContentTintColor_(ink)
-            title = AK.NSAttributedString.alloc().initWithString_attributes_(
-                button.title(),
-                {AK.NSForegroundColorAttributeName: ink, AK.NSFontAttributeName: button.font()},
-            )
-            button.setAttributedTitle_(title)
-
     def wantsUpdateLayer(self):
         return True
+
+    def updateLayer(self):
+        appearance = self.effectiveAppearance()
+        self.layer().setBackgroundColor_(theme.cg(theme.BAR, appearance))
+        self.label.setTextColor_(theme.BAR_INK)
+        for button in self.buttons:
+            button.setContentTintColor_(theme.BAR_INK)
+            button.setAttributedTitle_(
+                AK.NSAttributedString.alloc().initWithString_attributes_(
+                    button.title(),
+                    {AK.NSForegroundColorAttributeName: theme.BAR_INK, AK.NSFontAttributeName: button.font()},
+                )
+            )
 
     @objc.python_method
     def update(self, count, can_reveal, can_remove):
@@ -586,25 +638,89 @@ COLUMN_ACTIONS = "actions"
 ROW_HEIGHT = 44.0
 
 
-class QueueRowView(AK.NSTableRowView):
-    """Soft rounded hover/selection, like the family's lists (no system blue bar)."""
+class QueueHeaderView(AK.NSTableHeaderView):
+    """Column titles in the mockup's style: muted 11.5 pt on the window colour."""
 
-    hovered = False
+    def drawRect_(self, rect):
+        bounds = self.bounds()
+        theme.WINDOW.setFill()
+        AK.NSRectFill(bounds)
+        theme.HAIRLINE.setFill()
+        AK.NSRectFill(AK.NSMakeRect(0, bounds.size.height - 1, bounds.size.width, 1))
+        table = self.tableView()
+        if table is None:
+            return
+        for index, column in enumerate(table.tableColumns()):
+            title = column.title()
+            if not title:
+                continue
+            frame = self.headerRectOfColumn_(index)
+            right = column.headerCell().alignment() == AK.NSTextAlignmentRight
+            inset = 4 if right else 42 if index == 0 else 8  # 42: aligns with file names
+            _text(
+                title,
+                AK.NSMakeRect(frame.origin.x + (0 if right else inset), (bounds.size.height - 15) / 2,
+                              frame.size.width - inset, 15),
+                AK.NSFont.systemFontOfSize_(11.5),
+                theme.MUTED,
+                AK.NSTextAlignmentRight if right else AK.NSTextAlignmentLeft,
+            )
+
+    def isFlipped(self):
+        return True
+
+
+class QueueRowView(AK.NSTableRowView):
+    """Soft rounded hover/selection pill that fades (no system blue bar)."""
+
+    def initWithFrame_(self, frame):
+        self = objc.super(QueueRowView, self).initWithFrame_(frame)
+        if self is None:
+            return None
+        self._hovered = False
+        self.setWantsLayer_(True)
+        self.pill = Quartz.CALayer.layer()
+        self.pill.setCornerRadius_(8)
+        self.layer().addSublayer_(self.pill)
+        return self
+
+    @objc.python_method
+    def set_hovered(self, value, animated=True):
+        self._hovered = value
+        self._update_pill(animated)
+
+    def setSelected_(self, value):
+        objc.super(QueueRowView, self).setSelected_(value)
+        self._update_pill(True)
+
+    @objc.python_method
+    def _update_pill(self, animated):
+        if self.isSelected():
+            color = theme.ROW_SELECTED
+        elif self._hovered:
+            color = theme.HOVER
+        else:
+            color = AK.NSColor.clearColor()
+        Quartz.CATransaction.begin()
+        Quartz.CATransaction.setAnimationDuration_(theme.HOVER_FADE if animated else 0)
+        self.pill.setBackgroundColor_(theme.cg(color, self.effectiveAppearance()))
+        Quartz.CATransaction.commit()
+
+    def layout(self):
+        objc.super(QueueRowView, self).layout()
+        Quartz.CATransaction.begin()
+        Quartz.CATransaction.setDisableActions_(True)
+        self.pill.setFrame_(AK.NSInsetRect(self.bounds(), 6, 1))
+        Quartz.CATransaction.commit()
+
+    def viewDidChangeEffectiveAppearance(self):
+        self._update_pill(False)
 
     def drawBackgroundInRect_(self, rect):
-        if self.hovered and not self.isSelected():
-            AK.NSColor.labelColor().colorWithAlphaComponent_(0.035).setFill()
-            AK.NSBezierPath.bezierPathWithRoundedRect_xRadius_yRadius_(
-                AK.NSInsetRect(self.bounds(), 4, 1), 8, 8
-            ).fill()
+        pass
 
     def drawSelectionInRect_(self, rect):
-        AK.NSColor.controlAccentColor().colorWithAlphaComponent_(
-            0.13 if self.hovered else 0.09
-        ).setFill()
-        AK.NSBezierPath.bezierPathWithRoundedRect_xRadius_yRadius_(
-            AK.NSInsetRect(self.bounds(), 4, 1), 8, 8
-        ).fill()
+        pass
 
     def isEmphasized(self):
         return False
@@ -641,7 +757,7 @@ class CheckCircle(AK.NSView):
     def drawRect_(self, rect):
         circle = AK.NSBezierPath.bezierPathWithOvalInRect_(AK.NSInsetRect(self.bounds(), 1.5, 1.5))
         if self.checked:
-            AK.NSColor.controlAccentColor().setFill()
+            theme.ACCENT.setFill()
             circle.fill()
             tick = AK.NSBezierPath.bezierPath()
             tick.setLineWidth_(1.7)
@@ -650,12 +766,12 @@ class CheckCircle(AK.NSView):
             tick.moveToPoint_(AK.NSMakePoint(5.4, 9.2))
             tick.lineToPoint_(AK.NSMakePoint(7.9, 6.6))
             tick.lineToPoint_(AK.NSMakePoint(12.8, 11.6))
-            AK.NSColor.whiteColor().setStroke()
+            theme.ACCENT_INK.setStroke()
             tick.stroke()
         else:
-            AK.NSColor.controlBackgroundColor().setFill()
+            theme.CONTROL.setFill()
             circle.fill()
-            AK.NSColor.tertiaryLabelColor().setStroke()
+            theme.FAINT.setStroke()
             circle.setLineWidth_(1.3)
             circle.stroke()
 
@@ -726,6 +842,7 @@ class QueueTableController(FN.NSObject):
         self.table.setGridStyleMask_(AK.NSTableViewGridNone)
         self.table.setColumnAutoresizingStyle_(AK.NSTableViewFirstColumnOnlyAutoresizingStyle)
         self.table.setAccessibilityLabel_("PDF list")
+        self.table.setHeaderView_(QueueHeaderView.alloc().initWithFrame_(AK.NSMakeRect(0, 0, 720, 30)))
         for identifier, title, width, alignment in (
             (COLUMN_FILE, "File", 300, AK.NSTextAlignmentLeft),
             (COLUMN_ORIGINAL, "Original", 80, AK.NSTextAlignmentRight),
@@ -758,7 +875,7 @@ class QueueTableController(FN.NSObject):
 
     def tableView_rowViewForRow_(self, table, row):
         view = QueueRowView.alloc().initWithFrame_(AK.NSZeroRect)
-        view.hovered = row == self.table.hovered_row
+        view.set_hovered(row == self.table.hovered_row, animated=False)
         return view
 
     def tableView_viewForTableColumn_row_(self, table, column, row):
@@ -786,8 +903,7 @@ class QueueTableController(FN.NSObject):
                 rows.addIndex_(candidate)
                 row_view = self.table.rowViewAtRow_makeIfNecessary_(candidate, False)
                 if row_view is not None:
-                    row_view.hovered = candidate == row
-                    row_view.setNeedsDisplay_(True)
+                    row_view.set_hovered(candidate == row)
         if rows.count():
             self.table.reloadDataForRowIndexes_columnIndexes_(
                 rows, FN.NSIndexSet.indexSetWithIndexesInRange_(FN.NSMakeRange(0, 5))
@@ -814,10 +930,10 @@ class QueueTableController(FN.NSObject):
             spinner.startAnimation_(None)
             return spinner, "Compressing"
         symbol = {
-            Compressed: ("checkmark.circle.fill", OK(), "Completed"),
-            Failed: ("exclamationmark.circle.fill", FAIL(), "Failed"),
-            Unchanged: ("equal.circle", AK.NSColor.secondaryLabelColor(), "Not smaller"),
-            Queued: ("clock", AK.NSColor.tertiaryLabelColor(), "Queued"),
+            Compressed: ("checkmark.circle.fill", theme.SUCCESS, "Completed"),
+            Failed: ("exclamationmark.circle.fill", theme.FAIL, "Failed"),
+            Unchanged: ("equal.circle", theme.MUTED, "Not smaller"),
+            Queued: ("clock", theme.FAINT, "Queued"),
         }.get(type(state))
         if symbol is None:
             return None, "Ready"
@@ -830,7 +946,7 @@ class QueueTableController(FN.NSObject):
     def _detail_for(self, item):
         """Line under the file name + the full path for its tooltip."""
         state = item.state
-        muted = AK.NSColor.secondaryLabelColor()
+        muted = theme.MUTED
         if isinstance(state, Compressed):
             if state.output_path == item.path:
                 return "Replaced the original", state.output_path, muted
@@ -838,12 +954,12 @@ class QueueTableController(FN.NSObject):
                 return "Saved next to the original", state.output_path, muted
             return f"Saved in {display_folder(state.output_path)}", state.output_path, muted
         if isinstance(state, Failed):
-            return state.reason, item.path, FAIL()
+            return state.reason, item.path, theme.FAIL
         if isinstance(state, Unchanged):
             return state.reason, item.path, muted
         planned = self.controller.planned_output_for(item.path)
         if planned == item.path:
-            return "Will replace the original", item.path, WARN()
+            return "Will replace the original", item.path, theme.WARN
         if os.path.dirname(planned) == os.path.dirname(item.path):
             return "Will save next to the original", planned, muted
         return f"Will save to {display_folder(planned)}", planned, muted
@@ -861,7 +977,7 @@ class QueueTableController(FN.NSObject):
             if show_check
             else status
         )
-        name = self._label(item.name, AK.NSFont.systemFontOfSize_(13.0), AK.NSColor.labelColor())
+        name = self._label(item.name, AK.NSFont.systemFontOfSize_(13.0), theme.INK)
         views = [name]
         if isinstance(item.state, Compressing):
             bar = AK.NSProgressIndicator.alloc().initWithFrame_(AK.NSZeroRect)
@@ -909,13 +1025,13 @@ class QueueTableController(FN.NSObject):
     @objc.python_method
     def _value_text(self, item, identifier):
         state = item.state
-        faint = AK.NSColor.tertiaryLabelColor()
-        muted = AK.NSColor.secondaryLabelColor()
+        faint = theme.FAINT
+        muted = theme.MUTED
         if identifier == COLUMN_ORIGINAL:
-            return format_file_size(item.original_size), AK.NSColor.labelColor()
+            return format_file_size(item.original_size), theme.INK
         if identifier == COLUMN_COMPRESSED:
             if isinstance(state, Compressed):
-                return format_file_size(state.new_size), AK.NSColor.labelColor()
+                return format_file_size(state.new_size), theme.INK
             if isinstance(state, Compressing):
                 return "Compressing…", muted
             if isinstance(state, Queued):
@@ -923,10 +1039,10 @@ class QueueTableController(FN.NSObject):
             if isinstance(state, Unchanged):
                 return "Not smaller", muted
             if isinstance(state, Failed):
-                return "Failed", FAIL()
+                return "Failed", theme.FAIL
             return "—", faint
         if item.reduction is not None:
-            return f"↓ {item.reduction:.1f}%", OK()
+            return f"↓ {item.reduction:.1f}%", theme.SUCCESS
         return "", faint
 
     @objc.python_method
@@ -957,7 +1073,8 @@ class QueueTableController(FN.NSObject):
         button.setBordered_(False)
         button.setTag_(row)
         button.setToolTip_(description)
-        button.setContentTintColor_(AK.NSColor.secondaryLabelColor())
+        button.setContentTintColor_(theme.MUTED)
+        button.setFocusRingType_(AK.NSFocusRingTypeNone)
         button.setTranslatesAutoresizingMaskIntoConstraints_(False)
         return button
 

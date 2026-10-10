@@ -8,23 +8,37 @@ from pathlib import Path
 
 @unittest.skipUnless(sys.platform == "darwin", "macOS AppKit test")
 class FinderQuickActionTests(unittest.TestCase):
-    def test_originals_choice_in_main_window_is_session_only(self):
+    def test_originals_is_never_remembered_but_quality_is(self):
         import native_app
         from unittest import mock
 
         controller = native_app.PDFCompressorController.alloc()
         controller.keep_originals = True
+        controller.quality_index = 1
+        controller.output_folder = None
+        controller.use_output_folder = False
         controller.popover = None
         with (
             mock.patch.object(native_app.PDFCompressorController, "refresh"),
-            mock.patch.object(native_app.prefs, "save_compression_defaults") as save,
+            mock.patch.object(native_app.prefs, "remember_window") as remember,
         ):
             keep, replace = controller._originals_cards()
             replace.action()
             self.assertFalse(controller.keep_originals)
-            keep.action()
-            self.assertTrue(controller.keep_originals)
-            save.assert_not_called()
+            saved = remember.call_args.args[0]
+            self.assertFalse(hasattr(saved, "keep_originals"))
+
+            controller._quality_cards()[2].action()
+            self.assertEqual(remember.call_args.args[0].quality_index, 2)
+
+        with mock.patch.object(
+            native_app.prefs,
+            "window_memory",
+            return_value=native_app.prefs.WindowMemory(2, "/tmp/out", True),
+        ):
+            controller.apply_saved_defaults()
+        self.assertTrue(controller.keep_originals, "every launch starts on Keep")
+        self.assertEqual((controller.quality_index, controller.use_output_folder), (2, True))
 
     def test_quit_is_cancelled_while_compressing(self):
         import native_app

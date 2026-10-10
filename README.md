@@ -14,6 +14,11 @@ by Daniel Lares, licensed under the GNU AGPL v3 (see [LICENSE](LICENSE)).
   click the magnifier (or double-click) to reveal the file in Finder.
 - **Explicit originals.** Keep (default) or Replace. Replace only overwrites after the
   compressed file is created and verified; the old version goes to the Trash.
+- **Settings (⌘,)** holds only the app icon (eight designs, Squish by default) and the
+  theme. The chosen icon shows in the Dock and app switcher, and on the kept-in-Dock tile
+  while the app is closed. Finder and Launchpad always show Squish: changing a signed
+  app's own file icon would break its code signature.
+- Quality and Save to are remembered between launches; Originals always starts on Keep.
 - Upstream's Sparkle auto-update feed is disabled so the fork is never replaced by
   an upstream build.
 
