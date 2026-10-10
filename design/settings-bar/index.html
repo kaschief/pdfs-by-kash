@@ -1,0 +1,824 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Settings Bar Directions</title>
+<style>
+/* ── Pdfs by Kash tokens: family neutrals (Geminio / Budget lavender-tinted greys),
+      its own accent. Native SF Pro type so it stays a Mac app, not a web app. ── */
+:root {
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+  --page: #f3f2f8;
+  --page-ink: #1b1a2e;
+  --page-muted: #6d6b85;
+
+  --win: #ffffff;
+  --chrome: #f7f6fb;          /* bottom chrome, like Budget's surface-muted */
+  --title: #efeef5;
+  --line: #e8e6f1;            /* hairline */
+  --ink: #17162b;
+  --ink-2: #4a4862;
+  --muted: #8a88a3;
+  --faint: #b6b4c8;
+  --accent: #5b4ee8;          /* indigo, family accent */
+  --accent-ink: #ffffff;
+  --accent-soft: #eeecfd;
+  --accent-ring: color-mix(in oklab, #5b4ee8 38%, transparent);
+  --warn: #c2620a;
+  --warn-soft: #fff1e0;
+  --warn-ring: color-mix(in oklab, #c2620a 30%, transparent);
+  --ok: #2f8a3c;
+  --control: #ffffff;
+  --control-ring: color-mix(in oklab, #17162b 10%, transparent);
+  --float: #ffffff;
+  --float-shadow: 0 1px 1px rgb(23 22 43 / .04), 0 4px 10px -2px rgb(23 22 43 / .08), 0 22px 48px -12px rgb(23 22 43 / .28);
+  --win-shadow: 0 1px 2px rgb(23 22 43 / .06), 0 24px 60px -18px rgb(23 22 43 / .35);
+}
+.dark {
+  --win: #17162b;
+  --chrome: #1d1c36;
+  --title: #201f3c;
+  --line: #2b2950;
+  --ink: #efeefe;
+  --ink-2: #c9c7e6;
+  --muted: #9e9cc1;
+  --faint: #5f5d85;
+  --accent: #8f87ff;
+  --accent-ink: #12112a;
+  --accent-soft: #26235c;
+  --accent-ring: color-mix(in oklab, #8f87ff 45%, transparent);
+  --warn: #ffb35c;
+  --warn-soft: #3a2a14;
+  --warn-ring: color-mix(in oklab, #ffb35c 35%, transparent);
+  --ok: #8bdc7a;
+  --control: #24234a;
+  --control-ring: color-mix(in oklab, #ffffff 10%, transparent);
+  --float: #24234a;
+  --float-shadow: 0 1px 1px rgb(0 0 0 / .2), 0 6px 14px -2px rgb(0 0 0 / .35), 0 24px 50px -12px rgb(0 0 0 / .6);
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--page); color: var(--page-ink); font-family: var(--font); -webkit-font-smoothing: antialiased; }
+main { max-width: 1560px; margin: 0 auto; padding: 48px 32px 96px; }
+h1 { font-size: 28px; letter-spacing: -.02em; margin: 0 0 6px; }
+.lede { color: var(--page-muted); max-width: 820px; line-height: 1.5; margin: 0 0 28px; font-size: 14.5px; }
+.principles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 0 0 56px; }
+.principles div { background: #fff; border-radius: 12px; padding: 14px 16px; box-shadow: 0 1px 2px rgb(23 22 43 / .05); font-size: 13px; line-height: 1.45; color: var(--page-muted); }
+.principles b { display: block; color: var(--page-ink); font-size: 13.5px; margin-bottom: 3px; }
+
+section.variant { margin: 0 0 72px; }
+.v-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 4px; }
+.v-head .tag { font-size: 12px; font-weight: 600; color: var(--accent); background: var(--accent-soft); padding: 3px 9px; border-radius: 99px; }
+.v-head h2 { font-size: 21px; margin: 0; letter-spacing: -.01em; }
+.v-sub { color: var(--page-muted); font-size: 14px; line-height: 1.5; max-width: 900px; margin: 4px 0 18px; }
+.frames { display: grid; grid-template-columns: repeat(2, 720px); gap: 28px 40px; justify-content: start; }
+.frame-label { font-size: 12.5px; color: var(--page-muted); margin: 0 0 8px; display: flex; gap: 8px; align-items: center; }
+.frame-label b { color: var(--page-ink); font-weight: 600; }
+.notes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 20px; max-width: 1480px; }
+.notes div { font-size: 13px; line-height: 1.5; color: var(--page-muted); }
+.notes b { color: var(--page-ink); }
+
+/* ── Window ── */
+.win { width: 720px; background: var(--win); border-radius: 12px; box-shadow: var(--win-shadow); overflow: visible; position: relative; color: var(--ink); font-size: 13px; }
+.win .clip { border-radius: 12px; overflow: hidden; }
+.titlebar { height: 30px; background: var(--title); display: flex; align-items: center; padding: 0 12px; border-bottom: 1px solid var(--line); position: relative; }
+.lights { display: flex; gap: 8px; }
+.lights i { width: 12px; height: 12px; border-radius: 50%; background: #ff5f57; }
+.lights i:nth-child(2) { background: #febc2e; } .lights i:nth-child(3) { background: #28c840; }
+.titlebar .t { position: absolute; left: 0; right: 0; text-align: center; font-size: 13px; font-weight: 600; color: var(--ink-2); pointer-events: none; }
+
+.table { padding: 0 12px; }
+.thead, .tr { display: grid; grid-template-columns: 1fr 78px 92px 76px 60px; align-items: center; }
+.thead { height: 30px; font-size: 11.5px; color: var(--muted); border-bottom: 1px solid var(--line); padding: 0 8px; }
+.thead span:not(:first-child), .tr .num { text-align: right; }
+.tr { height: 44px; padding: 0 8px; border-radius: 8px; }
+.tr .file { display: flex; gap: 10px; align-items: center; min-width: 0; }
+.tr .file svg { flex: none; color: var(--faint); }
+.tr .name { font-size: 13px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tr .where { font-size: 11px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tr .where.warn { color: var(--warn); }
+.tr .where.fail { color: #d1453b; }
+.tr .num { font-variant-numeric: tabular-nums; font-size: 12.5px; color: var(--ink); }
+.tr .num.pending { color: var(--faint); }
+.tr .x { justify-self: end; color: var(--faint); }
+.tr .slot { width: 16px; height: 16px; flex: none; }
+.tr .acts { justify-self: end; display: flex; gap: 6px; color: var(--muted); }
+.spacer { height: 18px; }
+
+/* bottom chrome */
+.bottom { background: var(--chrome); border-top: 1px solid var(--line); }
+.footer { height: 52px; display: flex; align-items: center; gap: 10px; padding: 0 14px; }
+.footer .status { flex: 1; font-size: 12.5px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.icon-btn { width: 30px; height: 28px; border-radius: 8px; display: grid; place-items: center; background: var(--control); box-shadow: 0 0 0 1px var(--control-ring), 0 1px 1px rgb(23 22 43 / .04); color: var(--ink-2); }
+.btn { height: 28px; padding: 0 14px; border-radius: 8px; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; background: var(--control); box-shadow: 0 0 0 1px var(--control-ring), 0 1px 1px rgb(23 22 43 / .04); color: var(--ink); white-space: nowrap; }
+.btn.primary { background: var(--accent); color: var(--accent-ink); box-shadow: 0 1px 2px rgb(40 30 140 / .25); width: 112px; justify-content: center; }
+.btn.quiet { background: transparent; box-shadow: none; color: var(--ink-2); padding: 0 10px; }
+
+/* ── Shared bits ── */
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex: none; }
+.dot.warn { background: var(--warn); }
+.chev { color: var(--muted); flex: none; }
+.ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.tip { position: absolute; z-index: 20; background: var(--float); color: var(--ink); font-size: 11px; line-height: 1.35; padding: 5px 8px; border-radius: 6px; box-shadow: 0 0 0 1px var(--control-ring), var(--float-shadow); max-width: 280px; white-space: nowrap; }
+.tip small { display: block; color: var(--muted); font-size: 10.5px; }
+.cursor { position: absolute; z-index: 21; width: 14px; height: 20px; }
+.guide { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1px dashed color-mix(in oklab, #e5484d 70%, transparent); z-index: 30; pointer-events: none; }
+.guide-note { position: absolute; z-index: 31; font-size: 10px; color: #e5484d; background: #fff; padding: 1px 5px; border-radius: 4px; box-shadow: 0 0 0 1px #f3c4c5; white-space: nowrap; }
+
+.popover { position: absolute; z-index: 25; background: var(--float); border-radius: 12px; box-shadow: 0 0 0 1px var(--control-ring), var(--float-shadow); padding: 10px; }
+.popover h4 { margin: 4px 6px 8px; font-size: 11.5px; font-weight: 600; color: var(--muted); }
+.opt { display: grid; grid-template-columns: 26px 1fr; gap: 2px 10px; padding: 9px 10px; border-radius: 9px; align-items: start; }
+.opt + .opt { margin-top: 4px; }
+.opt .ico { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; background: color-mix(in oklab, var(--ink) 6%, transparent); color: var(--ink-2); grid-row: span 2; }
+.opt b { font-size: 13px; font-weight: 600; color: var(--ink); }
+.opt span { font-size: 11.5px; color: var(--muted); line-height: 1.4; }
+.opt.sel { background: var(--accent-soft); box-shadow: inset 0 0 0 1.5px var(--accent-ring); }
+.opt.sel .ico { background: var(--accent); color: var(--accent-ink); }
+.opt.warnsel { background: var(--warn-soft); box-shadow: inset 0 0 0 1.5px var(--warn-ring); }
+.opt.warnsel .ico { background: var(--warn); color: #fff; }
+.opt.disabled { opacity: .45; }
+
+/* ── A: Setting tiles ── */
+.tiles { display: grid; grid-template-columns: 1.35fr 1fr 1fr; gap: 8px; padding: 10px 14px 0; }
+.tile { height: 44px; border-radius: 10px; background: var(--control); box-shadow: 0 0 0 1px var(--control-ring), 0 1px 1px rgb(23 22 43 / .04); display: grid; grid-template-columns: 26px 1fr 12px; align-items: center; gap: 10px; padding: 0 10px; position: relative; }
+.tile .ico { width: 26px; height: 26px; border-radius: 7px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); }
+.tile .cap { font-size: 10.5px; color: var(--muted); line-height: 1.2; }
+.tile .val { font-size: 12.5px; color: var(--ink); font-weight: 500; line-height: 1.3; }
+.tile.warn .ico { background: var(--warn-soft); color: var(--warn); }
+.tile.warn .val { color: var(--warn); }
+.tile.off { background: transparent; box-shadow: 0 0 0 1px var(--control-ring); }
+.tile.off .ico { background: color-mix(in oklab, var(--ink) 5%, transparent); color: var(--faint); }
+.tile.off .val, .tile.off .cap { color: var(--faint); }
+.tile.hover { box-shadow: 0 0 0 1px var(--accent-ring), 0 1px 1px rgb(23 22 43 / .04); }
+
+/* ── B: One summary control ── */
+.summary { height: 28px; width: 290px; border-radius: 8px; background: var(--control); box-shadow: 0 0 0 1px var(--control-ring), 0 1px 1px rgb(23 22 43 / .04); display: flex; align-items: center; gap: 8px; padding: 0 10px; font-size: 12.5px; color: var(--ink); }
+.summary .sep { color: var(--faint); }
+.summary.open { box-shadow: 0 0 0 1.5px var(--accent-ring); background: var(--accent-soft); }
+.panel-sect + .panel-sect { margin-top: 8px; border-top: 1px solid var(--line); padding-top: 8px; }
+.radio-row { display: flex; align-items: center; gap: 9px; padding: 6px 8px; border-radius: 7px; font-size: 12.5px; color: var(--ink); }
+.radio-row .rd { width: 14px; height: 14px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--faint); flex: none; display: grid; place-items: center; }
+.radio-row.sel .rd { box-shadow: inset 0 0 0 1.5px var(--accent); }
+.radio-row.sel .rd::after { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+.radio-row .path { color: var(--muted); font-size: 11.5px; margin-left: auto; }
+.radio-row.disabled { opacity: .45; }
+.seg3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 3px; border-radius: 9px; background: color-mix(in oklab, var(--ink) 5%, transparent); }
+.seg3 span { text-align: center; font-size: 12px; padding: 5px 0; border-radius: 7px; color: var(--ink-2); }
+.seg3 span.sel { background: var(--control); color: var(--ink); font-weight: 600; box-shadow: 0 0 0 1px var(--control-ring), 0 1px 2px rgb(23 22 43 / .08); }
+.reason { font-size: 11px; color: var(--muted); padding: 2px 8px 0 31px; }
+
+/* ── C: Path bar ── */
+.pathbar { height: 40px; display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 18px; padding: 0 14px; border-bottom: 1px solid var(--line); }
+.crumbs { display: flex; align-items: center; gap: 6px; min-width: 0; font-size: 12.5px; color: var(--ink); }
+.crumbs .lead { color: var(--muted); flex: none; }
+.crumb { display: inline-flex; align-items: center; gap: 5px; padding: 3px 7px; border-radius: 6px; white-space: nowrap; }
+.crumb.hover { background: color-mix(in oklab, var(--ink) 6%, transparent); }
+.crumb svg { color: var(--accent); }
+.crumbs .gt { color: var(--faint); }
+.crumbs .change { color: var(--accent); font-weight: 500; margin-left: 4px; white-space: nowrap; }
+.inplace { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--warn); min-width: 0; }
+.switch-wrap { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-2); white-space: nowrap; }
+.switch { width: 30px; height: 18px; border-radius: 99px; background: color-mix(in oklab, var(--ink) 16%, transparent); position: relative; flex: none; }
+.switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgb(0 0 0 / .25); }
+.switch.on { background: var(--accent); }
+.switch.on::after { left: 14px; }
+.steps { display: flex; align-items: center; gap: 7px; font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+.steps .track { display: flex; align-items: center; gap: 0; position: relative; width: 64px; height: 18px; }
+.steps .track::before { content: ""; position: absolute; left: 4px; right: 4px; top: 8px; height: 2px; border-radius: 2px; background: color-mix(in oklab, var(--ink) 12%, transparent); }
+.steps .track i { position: absolute; top: 5px; width: 8px; height: 8px; border-radius: 50%; background: color-mix(in oklab, var(--ink) 22%, transparent); }
+.steps .track i.knob { top: 2px; width: 14px; height: 14px; background: #fff; box-shadow: 0 0 0 1px var(--control-ring), 0 1px 3px rgb(23 22 43 / .25); }
+.dark .steps .track i.knob { background: #e9e8fb; }
+
+/* ── D: Context banner ── */
+.banner { margin: 10px 12px 0; height: 38px; border-radius: 10px; display: flex; align-items: center; gap: 10px; padding: 0 8px 0 12px; font-size: 12.5px; color: var(--ink-2); background: var(--accent-soft); box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--accent) 16%, transparent); }
+.banner.warn { background: var(--warn-soft); box-shadow: inset 0 0 0 1px var(--warn-ring); color: var(--ink-2); }
+.banner .bico { color: var(--accent); flex: none; display: grid; }
+.banner.warn .bico { color: var(--warn); }
+.token { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 6px; background: var(--control); box-shadow: 0 0 0 1px var(--control-ring); font-weight: 500; color: var(--ink); white-space: nowrap; }
+.banner .msg { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; white-space: nowrap; overflow: hidden; }
+.banner .right { flex: none; width: 150px; display: flex; justify-content: flex-end; }
+.chips { display: flex; gap: 4px; padding: 3px; border-radius: 9px; background: color-mix(in oklab, var(--ink) 5%, transparent); }
+.chips span { font-size: 12px; padding: 4px 10px; border-radius: 7px; color: var(--ink-2); }
+.chips span.sel { background: var(--control); color: var(--ink); font-weight: 600; box-shadow: 0 0 0 1px var(--control-ring), 0 1px 2px rgb(23 22 43 / .08); }
+
+
+/* ── File list: states, selection, actions ── */
+.tr.hover { background: color-mix(in oklab, var(--ink) 3.5%, transparent); }
+.tr.sel { background: color-mix(in oklab, var(--accent) 8%, transparent); }
+.tr.sel.hover { background: color-mix(in oklab, var(--accent) 11%, transparent); }
+.check { width: 16px; height: 16px; border-radius: 50%; flex: none; box-shadow: inset 0 0 0 1.4px var(--faint); display: grid; place-items: center; background: var(--win); }
+.check.on { background: var(--accent); box-shadow: none; }
+.check.on::after { content: ""; width: 7px; height: 4px; border-left: 1.6px solid var(--accent-ink); border-bottom: 1.6px solid var(--accent-ink); transform: translateY(-1px) rotate(-45deg); }
+.tr .file .state-ico svg { color: inherit; }
+.state-ico { width: 16px; height: 16px; flex: none; display: grid; place-items: center; }
+.spin { width: 13px; height: 13px; border-radius: 50%; border: 1.8px solid color-mix(in oklab, var(--accent) 22%, transparent); border-top-color: var(--accent); }
+.rowbar { height: 3px; border-radius: 3px; background: color-mix(in oklab, var(--accent) 15%, transparent); margin-top: 4px; width: 180px; overflow: hidden; }
+.rowbar i { display: block; height: 100%; width: 58%; background: var(--accent); border-radius: 3px; }
+.num.queued { color: var(--muted); }
+.num.done { color: var(--ok); }
+.num.fail { color: #d1453b; }
+.act { width: 24px; height: 22px; border-radius: 6px; display: grid; place-items: center; color: var(--muted); }
+.act.hot { background: color-mix(in oklab, var(--ink) 7%, transparent); color: var(--ink); }
+.selbar { position: absolute; left: 50%; transform: translateX(-50%); z-index: 22; display: flex; align-items: center; gap: 4px; padding: 5px 6px 5px 14px; border-radius: 12px; background: #1f1d3a; color: #efeefe; font-size: 12.5px; box-shadow: 0 10px 30px -8px rgb(23 22 43 / .45); white-space: nowrap; }
+.dark .selbar { background: #efeefe; color: #17162b; }
+.selbar b { font-weight: 600; margin-right: 8px; }
+.selbar .sb { display: inline-flex; align-items: center; gap: 6px; padding: 5px 9px; border-radius: 8px; color: inherit; }
+.selbar .sb:hover, .selbar .sb.hot { background: rgb(255 255 255 / .1); }
+.selbar .sbsep { width: 1px; height: 16px; background: rgb(255 255 255 / .16); margin: 0 2px; }
+.menu { position: absolute; z-index: 26; width: 220px; background: var(--float); border-radius: 10px; padding: 5px; box-shadow: 0 0 0 1px var(--control-ring), var(--float-shadow); font-size: 13px; }
+.menu .mi { display: flex; align-items: center; gap: 9px; padding: 5px 8px; border-radius: 6px; color: var(--ink); }
+.menu .mi svg { color: var(--muted); flex: none; }
+.menu .mi.hot { background: var(--accent); color: var(--accent-ink); }
+.menu .mi.hot svg { color: var(--accent-ink); }
+.menu .mi kbd { margin-left: auto; font: inherit; font-size: 12px; color: var(--muted); }
+.menu .mi.hot kbd { color: var(--accent-ink); opacity: .8; }
+.menu hr { border: 0; height: 1px; background: var(--line); margin: 4px 6px; }
+.tiles.busy .tile { opacity: .55; }
+.footprog { width: 110px; height: 4px; border-radius: 4px; background: color-mix(in oklab, var(--accent) 15%, transparent); overflow: hidden; flex: none; }
+.footprog i { display: block; height: 100%; width: 38%; background: var(--accent); }
+.legend { width: 100%; border-collapse: collapse; font-size: 13px; background: #fff; border-radius: 14px; overflow: hidden; box-shadow: 0 1px 2px rgb(23 22 43 / .05); max-width: 1480px; }
+.legend th, .legend td { text-align: left; padding: 10px 14px; border-bottom: 1px solid #eceaf2; vertical-align: middle; }
+.legend th { color: var(--page-muted); font-size: 12px; font-weight: 600; }
+.legend td:first-child { font-weight: 600; white-space: nowrap; }
+.legend td svg, .legend td .spin { vertical-align: middle; display: inline-block; }
+
+/* tooltip spec */
+.spec { display: grid; grid-template-columns: 1.1fr 1fr; gap: 40px; align-items: start; background: #fff; border-radius: 14px; padding: 26px 28px; box-shadow: 0 1px 2px rgb(23 22 43 / .05); max-width: 1480px; }
+.spec h3 { margin: 0 0 10px; font-size: 16px; }
+.spec ul { margin: 0; padding-left: 18px; color: var(--page-muted); font-size: 13.5px; line-height: 1.65; }
+.spec ul b { color: var(--page-ink); }
+.spec-demo { display: flex; flex-direction: column; gap: 18px; }
+.spec-row { display: flex; align-items: center; gap: 18px; font-size: 12.5px; color: var(--page-muted); }
+.spec-row .tip { position: static; }
+.spec-row .old { font-size: 13px; background: #fffbe5; color: #111; border: 1px solid #c9c9c9; padding: 6px 9px; box-shadow: 0 4px 10px rgb(0 0 0 / .25); border-radius: 3px; white-space: pre-line; max-width: 300px; line-height: 1.3; }
+.verdict { margin-top: 56px; background: #fff; border-radius: 14px; padding: 24px 28px; box-shadow: 0 1px 2px rgb(23 22 43 / .05); max-width: 1480px; }
+.verdict h3 { margin: 0 0 12px; font-size: 16px; }
+.verdict table { border-collapse: collapse; width: 100%; font-size: 13px; }
+.verdict th, .verdict td { text-align: left; padding: 9px 10px; border-bottom: 1px solid #eceaf2; vertical-align: top; }
+.verdict th { color: var(--page-muted); font-weight: 600; font-size: 12px; }
+.verdict td:first-child { font-weight: 600; white-space: nowrap; }
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="i-plus" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" fill="none"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 16 16"><path d="M1.8 4.2c0-.7.5-1.2 1.2-1.2h3l1.4 1.5H13c.7 0 1.2.5 1.2 1.2v6.1c0 .7-.5 1.2-1.2 1.2H3c-.7 0-1.2-.5-1.2-1.2V4.2Z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></symbol>
+    <symbol id="i-folder-fill" viewBox="0 0 16 16"><path d="M1.8 4.2c0-.7.5-1.2 1.2-1.2h3l1.4 1.5H13c.7 0 1.2.5 1.2 1.2v6.1c0 .7-.5 1.2-1.2 1.2H3c-.7 0-1.2-.5-1.2-1.2V4.2Z" fill="currentColor" opacity=".9"/></symbol>
+    <symbol id="i-copies" viewBox="0 0 16 16"><rect x="4.5" y="4.5" width="8.5" height="9.5" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M3 11.2V3.6C3 2.7 3.7 2 4.6 2h5.6" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></symbol>
+    <symbol id="i-replace" viewBox="0 0 16 16"><path d="M3 6.2a5 5 0 0 1 9-1.7M13 9.8a5 5 0 0 1-9 1.7" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><path d="M12.4 2.2v2.6H9.8M3.6 13.8v-2.6h2.6" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-quality" viewBox="0 0 16 16"><circle cx="8" cy="8" r="5.6" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M8 2.4a5.6 5.6 0 0 1 0 11.2Z" fill="currentColor"/></symbol>
+    <symbol id="i-chev" viewBox="0 0 10 10"><path d="M2.5 3.8 5 6.3l2.5-2.5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-chev-up" viewBox="0 0 10 10"><path d="M2.5 6.2 5 3.7l2.5 2.5" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-sliders" viewBox="0 0 16 16"><path d="M2.5 5h7M12.5 5h1M2.5 11h1M6.5 11h7" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/><circle cx="11" cy="5" r="1.6" fill="none" stroke="currentColor" stroke-width="1.3"/><circle cx="5" cy="11" r="1.6" fill="none" stroke="currentColor" stroke-width="1.3"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M8 4.6V8l2.2 1.4" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></symbol>
+    <symbol id="i-x" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.2" fill="currentColor" opacity=".35"/><path d="m5.8 5.8 4.4 4.4m0-4.4-4.4 4.4" stroke="var(--win)" stroke-width="1.4" stroke-linecap="round"/></symbol>
+    <symbol id="i-home" viewBox="0 0 16 16"><path d="M2.5 7.2 8 2.6l5.5 4.6V13a.9.9 0 0 1-.9.9H9.6V10H6.4v3.9H3.4a.9.9 0 0 1-.9-.9V7.2Z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></symbol>
+    <symbol id="i-warn" viewBox="0 0 16 16"><path d="M8 2.2 14.3 13H1.7L8 2.2Z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M8 6.4v3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><circle cx="8" cy="11.3" r=".8" fill="currentColor"/></symbol>
+    <symbol id="i-reveal" viewBox="0 0 16 16"><path d="M1.8 4.2c0-.7.5-1.2 1.2-1.2h3l1.4 1.5H13c.7 0 1.2.5 1.2 1.2v6.1c0 .7-.5 1.2-1.2 1.2H3c-.7 0-1.2-.5-1.2-1.2V4.2Z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M6.6 10.4 9.8 7.2M7.4 7.2h2.4v2.4" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 16 16"><path d="M3 4.5h10M6.3 4.5V3.2h3.4v1.3M4.4 4.5l.6 8.3c0 .6.5 1 1.1 1h3.8c.6 0 1.1-.4 1.1-1l.6-8.3" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-open" viewBox="0 0 16 16"><rect x="2.5" y="2.5" width="11" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M6.5 9.5 10 6M7.2 6H10v2.8" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 16 16"><rect x="5" y="5" width="8" height="8.5" rx="1.6" fill="none" stroke="currentColor" stroke-width="1.3"/><path d="M3 10.5V3.8C3 3.1 3.6 2.5 4.3 2.5h5.2" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></symbol>
+    <symbol id="i-ok" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" fill="currentColor"/><path d="m5 8.2 2 2 4-4.2" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="i-fail" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" fill="currentColor"/><path d="M8 4.8v3.6" stroke="#fff" stroke-width="1.6" stroke-linecap="round"/><circle cx="8" cy="10.9" r=".9" fill="#fff"/></symbol>
+    <symbol id="i-same" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6" fill="none" stroke="currentColor" stroke-width="1.2"/><path d="M5.5 6.8h5M5.5 9.2h5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></symbol>
+    <symbol id="i-cursor" viewBox="0 0 14 20"><path d="M1 1v15.5l4-3.8 2.6 6 2.4-1-2.6-5.8H13L1 1Z" fill="#111" stroke="#fff" stroke-width="1.2" stroke-linejoin="round"/></symbol>
+  </defs>
+</svg>
+
+<main>
+  <h1>Pdfs by Kash · Settings bar directions</h1>
+  <p class="lede">Four ways to present <b>where files go</b>, <b>what happens to the originals</b> and <b>quality</b>, without the stock form-control look. Every frame is the real window at 720 pt. Each direction shows Keep, Replace, an interaction (popover or tooltip) and dark mode. Red dashed guides run through the Keep and Replace frames at the same x positions to show that nothing moves when you switch.</p>
+
+  <div class="principles">
+    <div><b>Nothing moves under the pointer</b>Every setting has a fixed slot. When a setting stops applying, its slot stays where it is, greys out and says why, the Geminio rule.</div>
+    <div><b>Say it in words, not widgets</b>Values read as plain language (“Next to originals”, “Replace”), so the bar describes what will happen.</div>
+    <div><b>Option cards over dropdowns</b>Small sets of choices get cards with a one-line explanation, as in Geminio’s settings, so the explanation doesn’t need a tooltip.</div>
+    <div><b>Family, not clone</b>Lavender-tinted neutrals, hairline outlines, 8–10 pt radii and a soft accent tint for selection, the same as Geminio and Budget. Native SF type keeps it a Mac app.</div>
+  </div>
+
+  <!-- ═════════════════════════ A ═════════════════════════ -->
+  <section class="variant">
+    <div class="v-head"><span class="tag">A</span><h2>Setting tiles</h2></div>
+    <p class="v-sub">Three quiet tiles above the footer, each with an icon, a small caption and the current value in words. Clicking a tile opens a small popover of option cards. All three values stay visible at all times. In Replace, the destination tile keeps its place, greys out and says “In place”.</p>
+    <div class="frames">
+      <div>
+        <p class="frame-label"><b>Keep</b> · default</p>
+        <div class="win"><div class="clip">
+          <div class="titlebar"><div class="lights"><i></i><i></i><i></i></div><div class="t">Pdfs by Kash</div></div>
+          <div class="table">
+            <div class="thead"><span>File</span><span>Original</span><span>Compressed</span><span>Reduction</span><span></span></div>
+            <div class="tr"><div class="file"><span class="slot"></span><div class="ellipsis"><div class="name">Holiday Photo Album.pdf</div><div class="where">Will save to ~/Desktop/Pdfs by Kash Test Files</div></div></div><span class="num">129.4 MB</span><span class="num pending">—</span><span class="num pending"></span><span class="acts"></span></div>
+            <div class="tr"><div class="file"><span class="slot"></span><div class="ellipsis"><div class="name">Signed Lease Agreement (scan).pdf</div><div class="where">Will save to ~/Desktop/Pdfs by Kash Test Files</div></div></div><span class="num">70.4 MB</span><span class="num pending">—</span><span class="num pending"></span><span class="acts"></span></div>
+            <div class="spacer"></div>
+          </div>
+          <div class="bottom">
+            <div class="tiles">
+              <div class="tile"><div class="ico"><svg width="15" height="15"><use href="#i-folder"/></svg></div><div class="ellipsis"><div class="cap">Save to</div><div class="val ellipsis">Next to originals</div></div><svg class="chev" width="10" height="10"><use href="#i-chev"/></svg></div>
+              <div class="tile"><div class="ico"><svg width="15" height="15"><use href="#i-copies"/></svg></div><div><div class="cap">Originals</div><div class="val">Keep</div></div><svg class="chev" width="10" height="10"><use href="#i-chev"/></svg></div>
+              <div class="tile"><div class="ico"><svg width="15" height="15"><use href="#i-quality"/></svg></div><div><div class="cap">Quality</div><div class="val">Balanced</div></div><svg class="chev" width="10" height="10"><use href="#i-chev"/></svg></div>
+            </div>
+            <div class="footer"><div class="icon-btn"><svg width="14" height="14"><use href="#i-plus"/></svg></div><div class="status">2 PDFs ready · 199.8 MB</div><span class="btn quiet">Clear</span><span class="btn primary">Compress</span></div>
+          </div>
+        </div>
+        <div class="guide" style="left:14px"></div><div class="guide" style="left:281px"></div><div class="guide" style="left:497px"></div>
+        </div>
+      </div>
+      <div>
+        <p class="frame-label"><b>Replace</b> · destination tile greys out in place, nothing reflows</p>
+        <div class="win"><div class="clip">
+          <div class="titlebar"><div class="lights"><i></i><i></i><i></i></div><div class="t">Pdfs by Kash</div></div>
+          <div class="table">
+            <div class="thead"><span>File</span><span>Original</span><span>Compressed</span><span>Reduction</span><span></span></div>
+            <div class="tr"><div class="file"><span class="slot"></span><div class="ellipsis"><div class="name">Holiday Photo Album.pdf</div><div class="where warn">Will replace the original</div></div></div><span class="num">129.4 MB</span><span class="num pending">—</span><span class="num pending"></span><span class="acts"></span></div>
+            <div class="tr"><div class="file"><span class="slot"></span><div class="ellipsis"><div class="name">Signed Lease Agreement (scan).pdf</div><div class="where warn">Will replace the original</div></div></div><span class="num">70.4 MB</span><span class="num pending">—</span><span class="num pending"></span><span class="acts"></span></div>
+            <div class="spacer"></div>
+          </div>
+          <div class="bottom">
+            <div class="tiles">
+              <div class="tile off"><div class="ico"><svg width="15" height="15"><use href="#i-folder"/></svg></div><div class="ellipsis"><div class="cap">Save to</div><div class="val ellipsis">In place of originals</div></div><span></span></div>
+              <div class="tile warn"><div class="ico"><svg width="15" height="15"><use href="#i-replace"/></svg></div><div><div class="cap">Originals</div><div class="val">Replace</div></div><svg class="chev" width="10" height="10"><use href="#i-chev"/></svg></div>
+              <div class="tile"><div class="ico"><svg width="15" height="15"><use href="#i-quality"/></svg></div><div><div class="cap">Quality</div><div class="val">Balanced</div></div><svg class="chev" width="10" height="10"><use href="#i-chev"/></svg></div>
+            </div>
+            <div class="footer"><div class="icon-btn"><svg width="14" height="14"><use href="#i-plus"/></svg></div><div class="status">2 PDFs ready · 199.8 MB</div><span class="btn quiet">Clear</span><span class="btn primary">Compress</span></div>
+          </div>
+        </div>
+        <div class="guide" style="left:14px"></div><div class="guide" style="left:281px"></div><div class="guide" style="left:497px"></div>
+        </div>
+      </div>
+      <div>
+        <p class="frame-label"><b>Interaction</b> · click Originals: option cards explain the choice, no tooltip needed</p>
+        <div class="win" style="margin-top:0"><div class="clip">
+          <div class="titlebar"><div class="lights"><i></i><i></i><i></i></div><div class="t">Pdfs by Kash</div></div>
+          <div class="table">
+            <div class="thead"><span>File</span><span>Original</span><span>Compressed</span><span>Reduction</span><span></span></div>
+            <div class="tr"><div class="file"><span class="slot"></span><div class="ellipsis"><div class="name">Holiday Photo Album.pdf</div><div class="where">Will save to ~/Desktop/Pdfs by Kash Test Files</div></div></div><span class="num">129.4 MB</span><span class="num pending">—</span><span class="num pending"></span><span class="acts"></span></div>
+            <div class="tr"><div class="file"><span class="slot"></span><div class="ellipsis"><div class="name">Signed Lease Agreement (scan).pdf</div><div class="where">Will save to ~/Desktop/Pdfs by Kash Test Files</div></div></div><span class="num">70.4 MB</span><span class="num pending">—</span><span class="num pending"></span><span class="acts"></span></div>
+            <div class="spacer"></div>
+          </div>
+          <div class="bottom">
+            <div class="tiles">
+              <div class="tile"><div class="ico"><svg width="15" height="15"><use href="#i-folder"/></svg></div><div class="ellipsis"><div class="cap">Save to</div><div class="val ellipsis">Next to originals</div></div><svg class="chev" width="10" height="10"><use href="#i-chev"/></svg></div>
+              <div class="tile hover"><div class="ico"><svg width="15" height="15"><use href="#i-copies"/></svg></div><div><div class="cap">Originals</div><div class="val">Keep</div></div><svg class="chev" width="10" height="10" style="color:var(--accent)"><use href="#i-chev-up"/></svg></div>
+              <div class="tile"><div class="ico"><svg width="15" height="15"><use href="#i-quality"/></svg></div><div><div class="cap">Quality</div><div class="val">Balanced</div></div><svg class="chev" width="10" height="10"><use href="#i-chev"/></svg></div>
+            </div>
+            <div class="footer"><div class="icon-btn"><svg width="14" height="14"><use href="#i-plus"/></svg></div><div class="status">2 PDFs ready · 199.8 MB</div><span class="btn quiet">Clear</span><span class="btn primary">Compress</span></div>
+          </div>
+        </div>
+          <div class="popover" style="left:226px; bottom:112px; width:300px">
+            <div class="opt sel"><div class="ico"><svg width="14" height="14"><use href="#i-copies"/></svg></div><b>Keep originals</b><span>Saves a compressed copy. Your files are never touched.</span></div>
+            <div class="opt"><div class="ico"><svg width="14" height="14"><use href="#i-replace"/></svg></div><b>Replace originals</b><span>Overwrites each file once its smaller version checks out. Old versions go to the Trash.</span></div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <p class="frame-label"><b>Dark</b> · with the one tooltip worth having: the full path, after a pause</p>
+        <div class="win dark"><div class="clip">
+          <div class="titlebar"><div class="lights"><i></i><i></i><i></i></div><div class="t">Pdfs by Kash</div></div>
+          <div class="table">
+            <div class="thead"><span>File</span><span>Original</span><span>Compressed</span><span>Reduction</span><span></span></div>
+            <div class="tr"><div class="file"><span class="slot"></span><div class="ellipsis"><div class="name">Holiday Photo Album.pdf</div><div class="where">Will save to ~/Documents/Compressed</div></div></div><span class="num">129.4 MB</span><span class="num pending">—</span><span class="num pending"></span><span class="acts"></span></div>
+            <div class="tr"><div class="file"><span class="slot"></span><div class="ellipsis"><div class="name">Signed Lease Agreement (scan).pdf</div><div class="where">Will save to ~/Documents/Compressed</div></div></div><span class="num">70.4 MB</span><span class="num pending">—</span><span class="num pending"></span><span class="acts"></span></div>
+            <div class="spacer"></div>
+          </div>
+          <div class="bottom">
+            <div class="tiles">
+              <div class="tile hover"><div class="ico"><svg width="15" height="15"><use href="#i-folder"/></svg></div><div class="ellipsis"><div class="cap">Save to</div><div class="val ellipsis">Compressed</div></div><svg class="chev" width="10" height="10"><use href="#i-chev"/></svg></div>
+              <div class="tile"><div class="ico"><svg width="15" height="15"><use href="#i-copies"/></svg></div><div><div class="cap">Originals</div><div class="val">Keep</div></div><svg class="chev" width="10" height="10"><use href="#i-chev"/></svg></div>
+              <div class="tile"><div class="ico"><svg width="15" height="15"><use href="#i-quality"/></svg></div><div><div class="cap">Quality</div><div class="val">Balanced</div></div><svg class="chev" width="10" height="10"><use href="#i-chev"/></svg></div>
+            </div>
+            <div class="footer"><div class="icon-btn"><svg width="14" height="14"><use href="#i-plus"/></svg></div><div class="status">2 PDFs ready · 199.8 MB</div><span class="btn quiet">Clear</span><span class="btn primary">Compress</span></div>
+          </div>
+        </div>
+          <div class="tip" style="left:60px; bottom:110px">/Users/kaschief/Documents/Compressed</div>
+          <svg class="cursor" style="left:150px; bottom:80px"><use href="#i-cursor"/></svg>
+        </div>
+      </div>
+    </div>
+    <div class="notes">
+      <div><b>Strength:</b> the three settings are always visible, named and labelled in words. It's the most explicit option and closest to your brief.</div>
+      <div><b>Cost:</b> it adds about 54 pt of height on top of the original's single footer. It's the most “present” of the four.</div>
+      <div><b>AppKit:</b> three custom-drawn <code>NSControl</code> tiles, each opening an <code>NSPopover</code> of option cards. Tile widths are fixed by the window, never by the text.</div>
+    </div>
+  </section>
+
+  <!-- ═════════════════════════ B ═════════════════════════ -->
+  <section class="variant">
+    <div class="v-head"><span class="tag">B</span><h2>One line, one panel</h2></div>
+    <p class="v-sub">Closest to the original's neatness: no settings bar at all. The footer gets one fixed-width summary control that reads like a sentence, e.g. “Keep · Next to originals · Balanced”. Clicking it opens a single panel holding all three settings. Each row in the list still shows exactly where its file will go, so the destination is never hidden.</p>
+    <div class="frames">
+      <div>
+        <p class="frame-label"><b>Keep</b> · default</p>
+        <div class="win"><div class="clip">
+          <div class="titlebar"><div class="lights"><i></i><i></i><i></i></div><div class="t">Pdfs by Kash</div></div>
+          <div class="table">
+            <div class="thead"><span>File</span><span>Original</span><span>Compressed</span><span>Reduction</span><span></span></div>
+            <div class="tr"><div class="file"><span class="slot"></span><div class="ellipsis"><div class="name">Holiday Photo Album.pdf</div><div class="where">Will save to ~/Desktop/Pdfs by Kash Test Files</div></div></div><span class="num">129.4 MB</span><span class="num pending">—</span><span class="num pending"></span><span class="acts"></span></div>
+            <div class="tr"><div class="file"><span class="slot"></span><div class="ellipsis"><div class="name">Signed Lease Agreement (scan).pdf</div><div class="where">Will save to ~/Desktop/Pdfs by Kash Test Files</div></div></div><span class="num">70.4 MB</span><span class="num pending">—</span><span class="num pending"></span><span class="acts"></span></div>
+            <div class="spacer"></div><div class="spacer"></div><div class="spacer"></div>
+          </div>
+          <div class="bottom">
+            <div class="footer"><div class="icon-btn"><svg width="14" height="14"><use href="#i-plus"/></svg></div><div class="status">2 PDFs ready · 199.8 MB</div>
+              <div class="summary"><svg width="14" height="14" style="color:var(--accent);flex:none"><use href="#i-sliders"/></svg><span>Keep</span><span class="sep">·</span><span class="ellipsis">Next to originals</span><span class="sep">·</span><span>Balanced</span><svg class="chev" width="10" height="10" style="margin-left:auto"><use href="#i-chev"/></svg></div>
+              <span class="btn primary">Compress</span></div>
+          </div>
+        </div>
+        <div class="guide" style="left:300px"></div><div class="guide" style="left:594px"></div>
+        </div>
+      </div>
+      <div>
+        <p class="frame-label"><b>Replace</b> · same control, same width, warm dot and words change</p>
+        <div class="win"><div class="clip">
+          <div class="titlebar"><div class="lights"><i></i><i></i><i></i></div><div class="t">Pdfs by Kash</div></div>
+          <div class="table">
+            <div class="thead"><span>File</span><span>Original</span><span>Compressed</span><span>Reduction</span><span></span></div>
+            <div class="tr"><div class="file"><span class="slot"></span><div class="ellipsis"><div class="name">Holiday Photo Album.pdf</div><div class="where warn">Will replace the original</div></div></div><span class="num">129.4 MB</span><span class="num pending">—</span><span class="num pending"></span><span class="acts"></span></div>
+            <div class="tr"><div class="file"><span class="slot"></span><div class="ellipsis"><div class="name">Signed Lease Agreement (scan).pdf</div><div class="where warn">Will replace the original</div></div></div><span class="num">70.4 MB</span><span class="num pending">—</span><span class="num pending"></span><span class="acts"></span></div>
+            <div class="spacer"></div><div class="spacer"></div><div class="spacer"></div>
+          </div>
+          <div class="bottom">
+            <div class="footer"><div class="icon-btn"><svg width="14" height="14"><use href="#i-plus"/></svg></div><div class="status">2 PDFs ready · 199.8 MB</div>
+              <div class="summary"><span class="dot warn"></span><span style="color:var(--warn);font-weight:500">Replace</span><span class="sep">·</span><span class="ellipsis">In place</span><span class="sep">·</span><span>Balanced</span><svg class="chev" width="10" height="10" style="margin-left:auto"><use href="#i-chev"/></svg></div>
+              <span class="btn primary">Compress</span></div>
+          </div>
+        </div>
+        <div class="guide" style="left:300px"></div><div class="guide" style="left:594px"></div>
+        </div>
+      </div>
+      <div>
+        <p class="frame-label"><b>Interaction</b> · the panel, Replace selected: destination rows stay, grey out and say why</p>
+        <div class="win" style="margin-top:350px"><div class="clip">
+          <div class="titlebar"><div class="lights"><i></i><i></i><i></i></div><div class="t">Pdfs by Kash</div></div>
+          <div class="table">
+            <div class="thead"><span>File</span><span>Original</span><span>Compressed</span><span>Reduction</span><span></span></div>
+            <div class="tr"><div class="file"><span class="slot"></span><div class="ellipsis"><div class="name">Holiday Photo Album.pdf</div><div class="where warn">Will replace the original</div></div></div><span class="num">129.4 MB</span><span class="num pending">—</span><span class="num pending"></span><span class="acts"></span></div>
+            <div class="spacer"></div>
+          </div>
+          <div class="bottom">
+            <div class="footer"><div class="icon-btn"><svg width="14" height="14"><use href="#i-plus"/></svg></div><div class="status">1 PDF ready · 129.4 MB</div>
+              <div class="summary open"><span class="dot warn"></span><span style="color:var(--warn);font-weight:500">Replace</span><span class="sep">·</span><span class="ellipsis">In place</span><span class="sep">·</span><span>Balanced</span><svg class="chev" width="10" height="10" style="margin-left:auto;color:var(--accent)"><use href="#i-chev-up"/></svg></div>
+              <span class="btn primary">Compress</span></div>
+          </div>
+        </div>
+          <div class="popover" style="left:300px; bottom:58px; width:330px">
+            <div class="panel-sect">
+              <h4>Originals</h4>
+              <div class="opt"><div class="ico"><svg width="14" height="14"><use href="#i-copies"/></svg></div><b>Keep originals</b><span>Save a compressed copy. Your files are never touched.</span></div>
+              <div class="opt warnsel"><div class="ico"><svg width="14" height="14"><use href="#i-replace"/></svg></div><b>Replace originals</b><span>Overwrites each file once its smaller version checks out. Old versions go to the Trash.</span></div>
+            </div>
+            <div class="panel-sect">
+              <h4>Save copies to</h4>
+              <div class="radio-row disabled"><span class="rd"></span>Next to each original</div>
+              <div class="radio-row disabled"><span class="rd"></span>Compressed<span class="path">~/Documents</span></div>
+              <div class="radio-row disabled"><span class="rd"></span>Choose Folder…</div>
+              <div class="reason">Not used while replacing originals.</div>
+            </div>
+            <div class="panel-sect">
+              <h4>Quality</h4>
+              <div class="seg3"><span>Smaller</span><span class="sel">Balanced</span><span>Sharper</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <p class="frame-label"><b>Dark</b> · Keep, with a custom folder</p>
+        <div class="win dark"><div class="clip">
+          <div class="titlebar"><div class="lights"><i></i><i></i><i></i></div><div class="t">Pdfs by Kash</div></div>
+          <div class="table">
+            <div class="thead"><span>File</span><span>Original</span><span>Compressed</span><span>Reduction</span><span></span></div>
+            <div class="tr"><div class="file"><svg width="16" height="16" style="color:var(--ok)"><circle cx="8" cy="8" r="6.5" fill="currentColor"/><path d="m5 8.2 2 2 4-4.2" fill="none" stroke="#17162b" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><div class="ellipsis"><div class="name">Holiday Photo Album.pdf</div><div class="where">Saved in ~/Documents/Compressed</div></div></div><span class="num">129.4 MB</span><span class="num">14.8 MB</span><span class="num" style="color:var(--ok)">↓ 88.6%</span><span class="acts"></span></div>
+            <div class="tr"><div class="file"><span class="slot"></span><div class="ellipsis"><div class="name">Signed Lease Agreement (scan).pdf</div><div class="where">Will save to ~/Documents/Compressed</div></div></div><span class="num">70.4 MB</span><span class="num pending">—</span><span class="num pending"></span><span class="acts"></span></div>
+            <div class="spacer"></div><div class="spacer"></div><div class="spacer"></div>
+          </div>
+          <div class="bottom">
+            <div class="footer"><div class="icon-btn"><svg width="14" height="14"><use href="#i-plus"/></svg></div><div class="status">1 compressed · 114.6 MB saved · 1 ready</div>
+              <div class="summary"><svg width="14" height="14" style="color:var(--accent);flex:none"><use href="#i-sliders"/></svg><span>Keep</span><span class="sep">·</span><span class="ellipsis">Compressed</span><span class="sep">·</span><span>Balanced</span><svg class="chev" width="10" height="10" style="margin-left:auto"><use href="#i-chev"/></svg></div>
+              <span class="btn primary">Compress</span></div>
+          </div>
+        </div></div>
+      </div>
+    </div>
+    <div class="notes">
+      <div><b>Strength:</b> it's as compact as the original FS PDF Compressor, with a single footer and nothing else. It's very calm, and it can't reflow because there's only one fixed slot.</div>
+      <div><b>Cost:</b> changing a setting takes one click to open the panel. The values are visible but small, and Replace is signalled by a warm dot plus the orange row text above.</div>
+      <div><b>AppKit:</b> one custom button with a fixed width that truncates in the middle, and one <code>NSPopover</code> holding option cards, radio rows and a three-step control.</div>
+    </div>
+  </section>
+
+  <!-- ═════════════════════════ C ═════════════════════════ -->
+  <section class="variant">
+    <div class="v-head"><span class="tag">C</span><h2>Finder path bar</h2></div>
+    <p class="v-sub">The destination is the hero, drawn like Finder's path bar so it reads as a place rather than a setting. Click any part of the path to change it. On the right, “Keep originals” is a switch and quality is a three-stop slider (Smaller ←→ Sharper). In Replace, the path slot keeps its width and shows a plain warning instead.</p>
+    <div class="frames">
+      <div>
+        <p class="frame-label"><b>Keep</b> · next to originals</p>
+        <div class="win"><div class="clip">
+          <div class="titlebar"><div class="lights"><i></i><i></i><i></i></div><div class="t">Pdfs by Kash</div></div>
+          <div class="table">
+            <div class="thead"><span>File</span><span>Original</span><span>Compressed</span><span>Reduction</span><span></span></div>
+            <div class="tr"><div class="file"><span class="slot"></span><div class="ellipsis"><div class="name">Holiday Photo Album.pdf</div><div class="where">Holiday Photo Album compressed.pdf</div></div></div><span class="num">129.4 MB</span><span class="num pending">—</span><span class="num pending"></span><span class="acts"></span></div>
+            <div class="tr"><div class="file"><span class="slot"></span><div class="ellipsis"><div class="name">Signed Lease Agreement (scan).pdf</div><div class="where">Signed Lease Agreement (scan) compressed.pdf</div></div></div><span class="num">70.4 MB</span><span class="num pending">—</span><span class="num pending"></span><span class="acts"></span></div>
+            <div class="spacer"></div>
+          </div>
+          <div class="bottom">
+            <div class="pathbar">
+              <div class="crumbs"><span class="lead">Saves to</span><span class="crumb"><svg width="14" height="14"><use href="#i-copies"/></svg>Next to each original</span><span class="change">Change…</span></div>
+              <div class="switch-wrap"><span class="switch on"></span>Keep originals</div>
+              <div class="steps">Smaller<span class="track"><i style="left:0"></i><i class="knob" style="left:25px"></i><i style="left:56px"></i></span>Sharper</div>
+            </div>
+            <div class="footer"><div class="icon-btn"><svg width="14" height="14"><use href="#i-plus"/></svg></div><div class="status">2 PDFs ready · 199.8 MB</div><span class="btn quiet">Clear</span><span class="btn primary">Compress</span></div>
+          </div>
+        </div>
+        <div class="guide" style="left:14px"></div><div class="guide" style="left:426px"></div><div class="guide" style="left:568px"></div>
+        </div>
+      </div>
+      <div>
+        <p class="frame-label"><b>Replace</b> · switch off; the path slot shows a warning in the same space</p>
+        <div class="win"><div class="clip">
+          <div class="titlebar"><div class="lights"><i></i><i></i><i></i></div><div class="t">Pdfs by Kash</div></div>
+          <div class="table">
+            <div class="thead"><span>File</span><span>Original</span><span>Compressed</span><span>Reduction</span><span></span></div>
+            <div class="tr"><div class="file"><span class="slot"></span><div class="ellipsis"><div class="name">Holiday Photo Album.pdf</div><div class="where warn">Will replace the original</div></div></div><span class="num">129.4 MB</span><span class="num pending">—</span><span class="num pending"></span><span class="acts"></span></div>
+            <div class="tr"><div class="file"><span class="slot"></span><div class="ellipsis"><div class="name">Signed Lease Agreement (scan).pdf</div><div class="where warn">Will replace the original</div></div></div><span class="num">70.4 MB</span><span class="num pending">—</span><span class="num pending"></span><span class="acts"></span></div>
+            <div class="spacer"></div>
+          </div>
+          <div class="bottom">
+            <div class="pathbar">
+              <div class="inplace"><svg width="15" height="15" style="flex:none"><use href="#i-warn"/></svg><span class="ellipsis">Originals are replaced · old versions go to the Trash</span></div>
+              <div class="switch-wrap"><span class="switch"></span>Keep originals</div>
+              <div class="steps">Smaller<span class="track"><i style="left:0"></i><i class="knob" style="left:25px"></i><i style="left:56px"></i></span>Sharper</div>
+            </div>
+            <div class="footer"><div class="icon-btn"><svg width="14" height="14"><use href="#i-plus"/></svg></div><div class="status">2 PDFs ready · 199.8 MB</div><span class="btn quiet">Clear</span><span class="btn primary">Compress</span></div>
+          </div>
+        </div>
+        <div class="guide" style="left:14px"></div><div class="guide" style="left:426px"></div><div class="guide" style="left:568px"></div>
+        </div>
+      </div>
+      <div>
+        <p class="frame-label"><b>Interaction</b> · custom folder as path crumbs; hovering a crumb gives the full path after a pause</p>
+        <div class="win"><div class="clip">
+          <div class="titlebar"><div class="lights"><i></i><i></i><i></i></div><div class="t">Pdfs by Kash</div></div>
+          <div class="table">
+            <div class="thead"><span>File</span><span>Original</span><span>Compressed</span><span>Reduction</span><span></span></div>
+            <div class="tr"><div class="file"><span class="slot"></span><div class="ellipsis"><div class="name">Holiday Photo Album.pdf</div><div class="where">Holiday Photo Album.pdf</div></div></div><span class="num">129.4 MB</span><span class="num pending">—</span><span class="num pending"></span><span class="acts"></span></div>
+            <div class="tr"><div class="file"><span class="slot"></span><div class="ellipsis"><div class="name">Signed Lease Agreement (scan).pdf</div><div class="where">Signed Lease Agreement (scan).pdf</div></div></div><span class="num">70.4 MB</span><span class="num pending">—</span><span class="num pending"></span><span class="acts"></span></div>
+            <div class="spacer"></div>
+          </div>
+          <div class="bottom">
+            <div class="pathbar">
+              <div class="crumbs"><span class="lead">Saves to</span><span class="crumb"><svg width="14" height="14"><use href="#i-home"/></svg>kaschief</span><span class="gt">›</span><span class="crumb">Documents</span><span class="gt">›</span><span class="crumb hover"><svg width="14" height="14"><use href="#i-folder-fill"/></svg>Compressed</span><span class="change">Change…</span></div>
+              <div class="switch-wrap"><span class="switch on"></span>Keep originals</div>
+              <div class="steps">Smaller<span class="track"><i style="left:0"></i><i class="knob" style="left:25px"></i><i style="left:56px"></i></span>Sharper</div>
+            </div>
+            <div class="footer"><div class="icon-btn"><svg width="14" height="14"><use href="#i-plus"/></svg></div><div class="status">2 PDFs ready · 199.8 MB</div><span class="btn quiet">Clear</span><span class="btn primary">Compress</span></div>
+          </div>
+        </div>
+          <div class="tip" style="left:200px; bottom:104px">Show “Compressed” in Finder<small>/Users/kaschief/Documents/Compressed</small></div>
+          <svg class="cursor" style="left:262px; bottom:72px"><use href="#i-cursor"/></svg>
+        </div>
+      </div>
+      <div>
+        <p class="frame-label"><b>Dark</b> · Keep, custom folder</p>
+        <div class="win dark"><div class="clip">
+          <div class="titlebar"><div class="lights"><i></i><i></i><i></i></div><div class="t">Pdfs by Kash</div></div>
+          <div class="table">
+            <div class="thead"><span>File</span><span>Original</span><span>Compressed</span><span>Reduction</span><span></span></div>
+            <div class="tr"><div class="file"><span class="slot"></span><div class="ellipsis"><div class="name">Holiday Photo Album.pdf</div><div class="where">Holiday Photo Album.pdf</div></div></div><span class="num">129.4 MB</span><span class="num pending">—</span><span class="num pending"></span><span class="acts"></span></div>
+            <div class="tr"><div class="file"><span class="slot"></span><div class="ellipsis"><div class="name">Signed Lease Agreement (scan).pdf</div><div class="where">Signed Lease Agreement (scan).pdf</div></div></div><span class="num">70.4 MB</span><span class="num pending">—</span><span class="num pending"></span><span class="acts"></span></div>
+            <div class="spacer"></div>
+          </div>
+          <div class="bottom">
+            <div class="pathbar">
+              <div class="crumbs"><span class="lead">Saves to</span><span class="crumb"><svg width="14" height="14"><use href="#i-home"/></svg>kaschief</span><span class="gt">›</span><span class="crumb">Documents</span><span class="gt">›</span><span class="crumb"><svg width="14" height="14"><use href="#i-folder-fill"/></svg>Compressed</span><span class="change">Change…</span></div>
+              <div class="switch-wrap"><span class="switch on"></span>Keep originals</div>
+              <div class="steps">Smaller<span class="track"><i style="left:0"></i><i class="knob" style="left:25px"></i><i style="left:56px"></i></span>Sharper</div>
+            </div>
+            <div class="footer"><div class="icon-btn"><svg width="14" height="14"><use href="#i-plus"/></svg></div><div class="status">2 PDFs ready · 199.8 MB</div><span class="btn quiet">Clear</span><span class="btn primary">Compress</span></div>
+          </div>
+        </div></div>
+      </div>
+    </div>
+    <div class="notes">
+      <div><b>Strength:</b> the destination is unmistakable, and it uses a vocabulary every Mac user already knows from Finder. The quality slider explains itself.</div>
+      <div><b>Cost:</b> a switch for Keep/Replace is less explicit than two named choices. It also reads well only when the window is wide enough for the path.</div>
+      <div><b>AppKit:</b> <code>NSPathControl</code> (the native Finder path bar), <code>NSSwitch</code> and a three-tick <code>NSSlider</code>. These are mostly native controls, given a quieter style.</div>
+    </div>
+  </section>
+
+  <!-- ═════════════════════════ D ═════════════════════════ -->
+  <section class="variant">
+    <div class="v-head"><span class="tag">D</span><h2>Plan sentence</h2></div>
+    <p class="v-sub">The settings become one sentence in a soft banner above the list, reading like Budget's message bar: “Save compressed copies <i>next to each original</i>” with the key words as small inline menus. Replace turns the banner warm and the sentence changes to match. Quality moves into the footer as a three-chip choice. The banner has a fixed height and its two menu slots never move.</p>
+    <div class="frames">
+      <div>
+        <p class="frame-label"><b>Keep</b> · default</p>
+        <div class="win"><div class="clip">
+          <div class="titlebar"><div class="lights"><i></i><i></i><i></i></div><div class="t">Pdfs by Kash</div></div>
+          <div class="banner"><span class="bico"><svg width="15" height="15"><use href="#i-copies"/></svg></span><div class="msg">Save compressed copies <span class="token">next to each original <svg class="chev" width="10" height="10"><use href="#i-chev"/></svg></span></div><div class="right"><span class="token">Keep originals <svg class="chev" width="10" height="10"><use href="#i-chev"/></svg></span></div></div>
+          <div class="table">
+            <div class="thead"><span>File</span><span>Original</span><span>Compressed</span><span>Reduction</span><span></span></div>
+            <div class="tr"><div class="file"><span class="slot"></span><div class="ellipsis"><div class="name">Holiday Photo Album.pdf</div><div class="where">Will save to ~/Desktop/Pdfs by Kash Test Files</div></div></div><span class="num">129.4 MB</span><span class="num pending">—</span><span class="num pending"></span><span class="acts"></span></div>
+            <div class="tr"><div class="file"><span class="slot"></span><div class="ellipsis"><div class="name">Signed Lease Agreement (scan).pdf</div><div class="where">Will save to ~/Desktop/Pdfs by Kash Test Files</div></div></div><span class="num">70.4 MB</span><span class="num pending">—</span><span class="num pending"></span><span class="acts"></span></div>
+            <div class="spacer"></div><div class="spacer"></div>
+          </div>
+          <div class="bottom">
+            <div class="footer"><div class="icon-btn"><svg width="14" height="14"><use href="#i-plus"/></svg></div><div class="status">2 PDFs ready · 199.8 MB</div>
+              <div class="chips"><span>Smaller</span><span class="sel">Balanced</span><span>Sharper</span></div>
+              <span class="btn primary">Compress</span></div>
+          </div>
+        </div>
+        <div class="guide" style="left:12px"></div><div class="guide" style="left:550px"></div>
+        </div>
+      </div>
+      <div>
+        <p class="frame-label"><b>Replace</b> · banner turns warm; the right-hand menu stays put</p>
+        <div class="win"><div class="clip">
+          <div class="titlebar"><div class="lights"><i></i><i></i><i></i></div><div class="t">Pdfs by Kash</div></div>
+          <div class="banner warn"><span class="bico"><svg width="15" height="15"><use href="#i-replace"/></svg></span><div class="msg">Overwrite each original once its smaller version checks out · old versions go to the Trash</div><div class="right"><span class="token" style="color:var(--warn)">Replace originals <svg class="chev" width="10" height="10"><use href="#i-chev"/></svg></span></div></div>
+          <div class="table">
+            <div class="thead"><span>File</span><span>Original</span><span>Compressed</span><span>Reduction</span><span></span></div>
+            <div class="tr"><div class="file"><span class="slot"></span><div class="ellipsis"><div class="name">Holiday Photo Album.pdf</div><div class="where warn">Will replace the original</div></div></div><span class="num">129.4 MB</span><span class="num pending">—</span><span class="num pending"></span><span class="acts"></span></div>
+            <div class="tr"><div class="file"><span class="slot"></span><div class="ellipsis"><div class="name">Signed Lease Agreement (scan).pdf</div><div class="where warn">Will replace the original</div></div></div><span class="num">70.4 MB</span><span class="num pending">—</span><span class="num pending"></span><span class="acts"></span></div>
+            <div class="spacer"></div><div class="spacer"></div>
+          </div>
+          <div class="bottom">
+            <div class="footer"><div class="icon-btn"><svg width="14" height="14"><use href="#i-plus"/></svg></div><div class="status">2 PDFs ready · 199.8 MB</div>
+              <div class="chips"><span>Smaller</span><span class="sel">Balanced</span><span>Sharper</span></div>
+              <span class="btn primary">Compress</span></div>
+          </div>
+        </div>
+        <div class="guide" style="left:12px"></div><div class="guide" style="left:550px"></div>
+        </div>
+      </div>
+      <div>
+        <p class="frame-label"><b>Interaction</b> · the destination word opens a small menu, with paths as secondary text</p>
+        <div class="win"><div class="clip">
+          <div class="titlebar"><div class="lights"><i></i><i></i><i></i></div><div class="t">Pdfs by Kash</div></div>
+          <div class="banner"><span class="bico"><svg width="15" height="15"><use href="#i-copies"/></svg></span><div class="msg">Save compressed copies <span class="token" style="box-shadow:0 0 0 1.5px var(--accent-ring)">next to each original <svg class="chev" width="10" height="10" style="color:var(--accent)"><use href="#i-chev-up"/></svg></span></div><div class="right"><span class="token">Keep originals <svg class="chev" width="10" height="10"><use href="#i-chev"/></svg></span></div></div>
+          <div class="table">
+            <div class="thead"><span>File</span><span>Original</span><span>Compressed</span><span>Reduction</span><span></span></div>
+            <div class="tr"><div class="file"><span class="slot"></span><div class="ellipsis"><div class="name">Holiday Photo Album.pdf</div><div class="where">Will save to ~/Desktop/Pdfs by Kash Test Files</div></div></div><span class="num">129.4 MB</span><span class="num pending">—</span><span class="num pending"></span><span class="acts"></span></div>
+            <div class="tr"><div class="file"><span class="slot"></span><div class="ellipsis"><div class="name">Signed Lease Agreement (scan).pdf</div><div class="where">Will save to ~/Desktop/Pdfs by Kash Test Files</div></div></div><span class="num">70.4 MB</span><span class="num pending">—</span><span class="num pending"></span><span class="acts"></span></div>
+            <div class="spacer"></div><div class="spacer"></div>
+          </div>
+          <div class="bottom">
+            <div class="footer"><div class="icon-btn"><svg width="14" height="14"><use href="#i-plus"/></svg></div><div class="status">2 PDFs ready · 199.8 MB</div>
+              <div class="chips"><span>Smaller</span><span class="sel">Balanced</span><span>Sharper</span></div>
+              <span class="btn primary">Compress</span></div>
+          </div>
+        </div>
+          <div class="popover" style="left:180px; top:76px; width:290px; padding:6px">
+            <div class="radio-row sel"><span class="rd"></span>Next to each original</div>
+            <div class="radio-row"><span class="rd"></span>Compressed<span class="path">~/Documents</span></div>
+            <div class="radio-row"><span class="rd"></span>Downloads<span class="path">~</span></div>
+            <div style="height:1px;background:var(--line);margin:4px 6px"></div>
+            <div class="radio-row" style="padding-left:31px">Choose Folder…</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <p class="frame-label"><b>Dark</b> · Replace</p>
+        <div class="win dark"><div class="clip">
+          <div class="titlebar"><div class="lights"><i></i><i></i><i></i></div><div class="t">Pdfs by Kash</div></div>
+          <div class="banner warn"><span class="bico"><svg width="15" height="15"><use href="#i-replace"/></svg></span><div class="msg">Overwrite each original once its smaller version checks out · old versions go to the Trash</div><div class="right"><span class="token" style="color:var(--warn)">Replace originals <svg class="chev" width="10" height="10"><use href="#i-chev"/></svg></span></div></div>
+          <div class="table">
+            <div class="thead"><span>File</span><span>Original</span><span>Compressed</span><span>Reduction</span><span></span></div>
+            <div class="tr"><div class="file"><span class="slot"></span><div class="ellipsis"><div class="name">Holiday Photo Album.pdf</div><div class="where warn">Will replace the original</div></div></div><span class="num">129.4 MB</span><span class="num pending">—</span><span class="num pending"></span><span class="acts"></span></div>
+            <div class="tr"><div class="file"><span class="slot"></span><div class="ellipsis"><div class="name">Signed Lease Agreement (scan).pdf</div><div class="where warn">Will replace the original</div></div></div><span class="num">70.4 MB</span><span class="num pending">—</span><span class="num pending"></span><span class="acts"></span></div>
+            <div class="spacer"></div><div class="spacer"></div>
+          </div>
+          <div class="bottom">
+            <div class="footer"><div class="icon-btn"><svg width="14" height="14"><use href="#i-plus"/></svg></div><div class="status">2 PDFs ready · 199.8 MB</div>
+              <div class="chips"><span>Smaller</span><span class="sel">Balanced</span><span>Sharper</span></div>
+              <span class="btn primary">Compress</span></div>
+          </div>
+        </div></div>
+      </div>
+    </div>
+    <div class="notes">
+      <div><b>Strength:</b> it reads as a plan rather than a form, and the warm banner makes Replace impossible to miss. Quality becomes a direct one-click choice.</div>
+      <div><b>Cost:</b> the settings sit at the top while Compress sits at the bottom. The sentence also needs care with truncation at narrow widths.</div>
+      <div><b>AppKit:</b> a custom banner view with two inline pop-up buttons styled as tokens, plus a three-segment chip control in the footer.</div>
+    </div>
+  </section>
+
+
+  <!-- ═════════════════════════ File list ═════════════════════════ -->
+  <section class="variant">
+    <div class="v-head"><span class="tag">List</span><h2>File states, selection and actions</h2></div>
+    <p class="v-sub">The list works the same whichever settings direction you pick; A is shown here. Newly added files carry <b>no status at all</b>: being in the list already says “ready”, so the Compressed column stays a quiet dash. A status only appears once you press Compress. Row actions appear on hover, and a selection gets a floating action bar.</p>
+    <div class="frames">
+      <div><p class="frame-label"><b>Just added</b> · no badges; hovering a row shows its checkbox and ✕</p><div class="win"><div class="clip">
+          <div class="titlebar"><div class="lights"><i></i><i></i><i></i></div><div class="t">Pdfs by Kash</div></div>
+          <div class="table">
+            <div class="thead"><span>File</span><span>Original</span><span>Compressed</span><span>Reduction</span><span></span></div>
+            <div class="tr "><div class="file"><span class="slot"></span><div class="ellipsis"><div class="name">Holiday Photo Album.pdf</div><div class="where ">Will save next to the original</div></div></div><span class="num">129.4 MB</span><span class="num pending">—</span><span class="num "></span><span class="acts"></span></div><div class="tr hover"><div class="file"><span class="check"></span><div class="ellipsis"><div class="name">Signed Lease Agreement (scan).pdf</div><div class="where ">Will save next to the original</div></div></div><span class="num">70.4 MB</span><span class="num pending">—</span><span class="num "></span><span class="acts"><span class="act"><svg width="14" height="14"><use href="#i-x"/></svg></span></span></div><div class="tr "><div class="file"><span class="slot"></span><div class="ellipsis"><div class="name">Annual Report 2025.pdf</div><div class="where ">Will save next to the original</div></div></div><span class="num">34.1 MB</span><span class="num pending">—</span><span class="num "></span><span class="acts"></span></div><div class="tr "><div class="file"><span class="slot"></span><div class="ellipsis"><div class="name">Bank Statements.pdf</div><div class="where ">Will save next to the original</div></div></div><span class="num">15.9 MB</span><span class="num pending">—</span><span class="num "></span><span class="acts"></span></div>
+            <div class="spacer"></div><div class="spacer"></div>
+          </div>
+          <div class="bottom"><div class="tiles">
+              <div class="tile"><div class="ico"><svg width="15" height="15"><use href="#i-folder"/></svg></div><div class="ellipsis"><div class="cap">Save to</div><div class="val ellipsis">Next to originals</div></div><svg class="chev" width="10" height="10"><use href="#i-chev"/></svg></div>
+              <div class="tile"><div class="ico"><svg width="15" height="15"><use href="#i-copies"/></svg></div><div><div class="cap">Originals</div><div class="val">Keep</div></div><svg class="chev" width="10" height="10"><use href="#i-chev"/></svg></div>
+              <div class="tile"><div class="ico"><svg width="15" height="15"><use href="#i-quality"/></svg></div><div><div class="cap">Quality</div><div class="val">Balanced</div></div><svg class="chev" width="10" height="10"><use href="#i-chev"/></svg></div>
+            </div><div class="footer"><div class="icon-btn"><svg width="14" height="14"><use href="#i-plus"/></svg></div><div class="status">4 PDFs ready · 249.8 MB</div><span class="btn quiet">Clear</span><span class="btn primary">Compress</span></div></div>
+        </div><svg class="cursor" style="left:300px; top:120px"><use href="#i-cursor"/></svg></div></div>
+      <div><p class="frame-label"><b>Building a selection</b> · click the circles to add files one by one; ⌘- and ⇧-click still work</p><div class="win"><div class="clip">
+          <div class="titlebar"><div class="lights"><i></i><i></i><i></i></div><div class="t">Pdfs by Kash</div></div>
+          <div class="table">
+            <div class="thead"><span>File</span><span>Original</span><span>Compressed</span><span>Reduction</span><span></span></div>
+            <div class="tr sel"><div class="file"><span class="check on"></span><div class="ellipsis"><div class="name">Holiday Photo Album.pdf</div><div class="where ">Will save next to the original</div></div></div><span class="num">129.4 MB</span><span class="num pending">—</span><span class="num "></span><span class="acts"></span></div><div class="tr "><div class="file"><span class="check"></span><div class="ellipsis"><div class="name">Signed Lease Agreement (scan).pdf</div><div class="where ">Will save next to the original</div></div></div><span class="num">70.4 MB</span><span class="num pending">—</span><span class="num "></span><span class="acts"></span></div><div class="tr sel hover"><div class="file"><span class="check on"></span><div class="ellipsis"><div class="name">Annual Report 2025.pdf</div><div class="where ">Will save next to the original</div></div></div><span class="num">34.1 MB</span><span class="num pending">—</span><span class="num "></span><span class="acts"><span class="act"><svg width="14" height="14"><use href="#i-x"/></svg></span></span></div><div class="tr "><div class="file"><span class="check"></span><div class="ellipsis"><div class="name">Bank Statements.pdf</div><div class="where ">Will save next to the original</div></div></div><span class="num">15.9 MB</span><span class="num pending">—</span><span class="num "></span><span class="acts"></span></div>
+            <div class="spacer"></div><div class="spacer"></div>
+          </div>
+          <div class="bottom"><div class="tiles">
+              <div class="tile"><div class="ico"><svg width="15" height="15"><use href="#i-folder"/></svg></div><div class="ellipsis"><div class="cap">Save to</div><div class="val ellipsis">Next to originals</div></div><svg class="chev" width="10" height="10"><use href="#i-chev"/></svg></div>
+              <div class="tile"><div class="ico"><svg width="15" height="15"><use href="#i-copies"/></svg></div><div><div class="cap">Originals</div><div class="val">Keep</div></div><svg class="chev" width="10" height="10"><use href="#i-chev"/></svg></div>
+              <div class="tile"><div class="ico"><svg width="15" height="15"><use href="#i-quality"/></svg></div><div><div class="cap">Quality</div><div class="val">Balanced</div></div><svg class="chev" width="10" height="10"><use href="#i-chev"/></svg></div>
+            </div><div class="footer"><div class="icon-btn"><svg width="14" height="14"><use href="#i-plus"/></svg></div><div class="status">4 PDFs ready · 249.8 MB · Compress includes all 4</div><span class="btn quiet">Clear</span><span class="btn primary">Compress</span></div></div>
+        </div><div class="selbar" style="bottom:118px"><b>2 selected</b><span class="sb"><svg width="14" height="14"><use href="#i-reveal"/></svg>Show in Finder</span><span class="sb hot"><svg width="14" height="14"><use href="#i-trash"/></svg>Remove</span><span class="sbsep"></span><span class="sb">Done</span></div></div></div>
+      <div><p class="frame-label"><b>Compressing</b> · Queued → Compressing (with a row progress bar) → Completed</p><div class="win"><div class="clip">
+          <div class="titlebar"><div class="lights"><i></i><i></i><i></i></div><div class="t">Pdfs by Kash</div></div>
+          <div class="table">
+            <div class="thead"><span>File</span><span>Original</span><span>Compressed</span><span>Reduction</span><span></span></div>
+            <div class="tr "><div class="file"><span class="state-ico" style="color:var(--ok)"><svg width="16" height="16"><use href="#i-ok"/></svg></span><div class="ellipsis"><div class="name">Holiday Photo Album.pdf</div><div class="where ">Saved next to the original</div></div></div><span class="num">129.4 MB</span><span class="num ">14.8 MB</span><span class="num done">↓ 88.6%</span><span class="acts"></span></div><div class="tr "><div class="file"><span class="state-ico"><span class="spin"></span></span><div class="ellipsis"><div class="name">Signed Lease Agreement (scan).pdf</div><div class="rowbar"><i></i></div></div></div><span class="num">70.4 MB</span><span class="num queued">Compressing…</span><span class="num "></span><span class="acts"></span></div><div class="tr "><div class="file"><span class="state-ico" style="color:var(--muted)"><svg width="15" height="15"><use href="#i-clock"/></svg></span><div class="ellipsis"><div class="name">Annual Report 2025.pdf</div><div class="where ">Will save next to the original</div></div></div><span class="num">34.1 MB</span><span class="num queued">Queued</span><span class="num "></span><span class="acts"></span></div><div class="tr "><div class="file"><span class="state-ico" style="color:var(--muted)"><svg width="15" height="15"><use href="#i-clock"/></svg></span><div class="ellipsis"><div class="name">Bank Statements.pdf</div><div class="where ">Will save next to the original</div></div></div><span class="num">15.9 MB</span><span class="num queued">Queued</span><span class="num "></span><span class="acts"></span></div>
+            <div class="spacer"></div><div class="spacer"></div>
+          </div>
+          <div class="bottom"><div class="tiles busy">
+              <div class="tile"><div class="ico"><svg width="15" height="15"><use href="#i-folder"/></svg></div><div class="ellipsis"><div class="cap">Save to</div><div class="val ellipsis">Next to originals</div></div><svg class="chev" width="10" height="10"><use href="#i-chev"/></svg></div>
+              <div class="tile"><div class="ico"><svg width="15" height="15"><use href="#i-copies"/></svg></div><div><div class="cap">Originals</div><div class="val">Keep</div></div><svg class="chev" width="10" height="10"><use href="#i-chev"/></svg></div>
+              <div class="tile"><div class="ico"><svg width="15" height="15"><use href="#i-quality"/></svg></div><div><div class="cap">Quality</div><div class="val">Balanced</div></div><svg class="chev" width="10" height="10"><use href="#i-chev"/></svg></div>
+            </div><div class="footer"><div class="icon-btn"><svg width="14" height="14"><use href="#i-plus"/></svg></div><div class="status">Compressing 2 of 4…</div><div class="footprog"><i></i></div><span class="btn primary" style="opacity:.45">Compress</span></div></div>
+        </div></div></div>
+      <div><p class="frame-label"><b>Results</b> · hover shows a Finder icon; right-click, ⌘R or a double-click also reveal the file</p><div class="win"><div class="clip">
+          <div class="titlebar"><div class="lights"><i></i><i></i><i></i></div><div class="t">Pdfs by Kash</div></div>
+          <div class="table">
+            <div class="thead"><span>File</span><span>Original</span><span>Compressed</span><span>Reduction</span><span></span></div>
+            <div class="tr hover"><div class="file"><span class="state-ico" style="color:var(--ok)"><svg width="16" height="16"><use href="#i-ok"/></svg></span><div class="ellipsis"><div class="name">Holiday Photo Album.pdf</div><div class="where ">Saved next to the original</div></div></div><span class="num">129.4 MB</span><span class="num ">14.8 MB</span><span class="num done">↓ 88.6%</span><span class="acts"><span class="act hot"><svg width="15" height="15"><use href="#i-reveal"/></svg></span><span class="act"><svg width="14" height="14"><use href="#i-x"/></svg></span></span></div><div class="tr "><div class="file"><span class="state-ico" style="color:var(--ok)"><svg width="16" height="16"><use href="#i-ok"/></svg></span><div class="ellipsis"><div class="name">Signed Lease Agreement (scan).pdf</div><div class="where ">Saved next to the original</div></div></div><span class="num">70.4 MB</span><span class="num ">9.1 MB</span><span class="num done">↓ 87.1%</span><span class="acts"></span></div><div class="tr sel"><div class="file"><span class="state-ico" style="color:var(--ok)"><svg width="16" height="16"><use href="#i-ok"/></svg></span><div class="ellipsis"><div class="name">Annual Report 2025.pdf</div><div class="where ">Saved next to the original</div></div></div><span class="num">34.1 MB</span><span class="num ">5.0 MB</span><span class="num done">↓ 85.3%</span><span class="acts"></span></div><div class="tr "><div class="file"><span class="state-ico" style="color:#d1453b"><svg width="16" height="16"><use href="#i-fail"/></svg></span><div class="ellipsis"><div class="name">Bank Statements.pdf</div><div class="where fail">Ghostscript couldn’t read this file</div></div></div><span class="num">15.9 MB</span><span class="num fail">Failed</span><span class="num "></span><span class="acts"></span></div>
+            <div class="spacer"></div><div class="spacer"></div>
+          </div>
+          <div class="bottom"><div class="tiles">
+              <div class="tile"><div class="ico"><svg width="15" height="15"><use href="#i-folder"/></svg></div><div class="ellipsis"><div class="cap">Save to</div><div class="val ellipsis">Next to originals</div></div><svg class="chev" width="10" height="10"><use href="#i-chev"/></svg></div>
+              <div class="tile"><div class="ico"><svg width="15" height="15"><use href="#i-copies"/></svg></div><div><div class="cap">Originals</div><div class="val">Keep</div></div><svg class="chev" width="10" height="10"><use href="#i-chev"/></svg></div>
+              <div class="tile"><div class="ico"><svg width="15" height="15"><use href="#i-quality"/></svg></div><div><div class="cap">Quality</div><div class="val">Balanced</div></div><svg class="chev" width="10" height="10"><use href="#i-chev"/></svg></div>
+            </div><div class="footer"><div class="icon-btn"><svg width="14" height="14"><use href="#i-plus"/></svg></div><div class="status">3 compressed · 194.9 MB saved (83%) · 1 failed</div><span class="btn quiet">Clear</span><span class="btn primary">Compress Again</span></div></div>
+        </div><div class="tip" style="left:556px; top:46px">Show in Finder</div>
+          <div class="menu" style="left:240px; top:178px">
+            <div class="mi hot"><svg width="14" height="14"><use href="#i-reveal"/></svg>Show in Finder<kbd>⌘R</kbd></div>
+            <div class="mi"><svg width="14" height="14"><use href="#i-open"/></svg>Open Compressed PDF<kbd>⌘O</kbd></div>
+            <div class="mi"><svg width="14" height="14"><use href="#i-copy"/></svg>Copy Path</div>
+            <hr>
+            <div class="mi"><svg width="14" height="14"><use href="#i-trash"/></svg>Remove from List<kbd>⌫</kbd></div>
+          </div></div></div>
+    </div>
+    <div class="notes">
+      <div><b>Selection is for managing files, not for choosing what to compress.</b> Compress always means every ready file, and while files are selected the footer says so (“Compress includes all 4”), so nothing gets skipped silently. A hidden filter would be the riskier design. If you'd rather compress only the selection, the button could read “Compress Selected” with a fixed width.</div>
+      <div><b>Checkboxes stay out of the way.</b> The leading slot is empty for ready files; hover a row and a circle appears there. Once anything is selected, every row shows its circle so you can keep adding with single clicks. Clicking the row itself keeps normal Mac selection. Done, or Esc, clears it.</div>
+      <div><b>Reveal without clutter.</b> The repeated magnifier is gone. A folder-with-arrow icon (Finder's own metaphor) appears only on the hovered completed row, next to ✕. It is also in the right-click menu, under ⌘R (Finder's own shortcut), on double-click, and in the selection bar for several files at once.</div>
+    </div>
+    <table class="legend" style="margin-top:22px">
+      <tr><th>State</th><th>When</th><th>Leading slot</th><th>Compressed column</th><th>Line under the name</th></tr>
+      <tr><td>Ready</td><td>Added, nothing started</td><td><span style="color:var(--page-muted)">empty (circle on hover)</span></td><td>—</td><td>Where it will be saved</td></tr>
+      <tr><td>Queued</td><td>Compress pressed, waiting its turn</td><td><svg width="15" height="15" style="color:#8a88a3"><use href="#i-clock"/></svg></td><td>Queued</td><td>Where it will be saved</td></tr>
+      <tr><td>Compressing</td><td>Being processed now</td><td><span class="spin"></span></td><td>Compressing…</td><td>A thin progress bar</td></tr>
+      <tr><td>Completed</td><td>Smaller copy saved</td><td><svg width="16" height="16" style="color:#2f8a3c"><use href="#i-ok"/></svg></td><td>New size, then ↓ %</td><td>Where it was saved</td></tr>
+      <tr><td>Not smaller</td><td>Couldn’t be reduced, so nothing was written</td><td><svg width="16" height="16" style="color:#8a88a3"><use href="#i-same"/></svg></td><td>Not smaller</td><td>Left unchanged</td></tr>
+      <tr><td>Failed</td><td>Compression error</td><td><svg width="16" height="16" style="color:#d1453b"><use href="#i-fail"/></svg></td><td>Failed</td><td>Why, in plain words</td></tr>
+    </table>
+  </section>
+
+  <!-- ═════════════════════════ Tooltips ═════════════════════════ -->
+  <section class="variant">
+    <div class="v-head"><span class="tag">All</span><h2>Tooltips: when, what, and how they look</h2></div>
+    <div class="spec">
+      <div>
+        <h3>Rules (adopted from Geminio’s FastTooltip)</h3>
+        <ul>
+          <li><b>Fewer tooltips.</b> No tooltip on anything whose label already says it: Compress, Clear, Keep, Replace, quality names. The option cards carry the explanations instead.</li>
+          <li><b>Only for secondary detail:</b> a truncated path (show the full path), icon-only buttons (“Show in Finder”, “Remove from list”), and a disabled control (say why).</li>
+          <li><b>Delay:</b> about 0.7 s before the first tooltip, then instant while you move to neighbouring controls, the way macOS warms up. Upstream used the system default of about 1.5 s with heavy yellow boxes. The current build shows them almost at once.</li>
+          <li><b>Look:</b> 11 pt, 6 pt radius, the app’s own floating surface with a hairline ring and a soft shadow. At most 280 pt wide, placed above the control so it never covers the next one, and it never takes clicks.</li>
+          <li><b>Never repeat</b> the visible label.</li>
+        </ul>
+      </div>
+      <div class="spec-demo">
+        <div class="spec-row"><span style="width:110px">Current build</span><span class="old">Each compressed PDF overwrites its original; the old version goes to the Trash.</span></div>
+        <div class="spec-row"><span style="width:110px">Proposed: path</span><span class="tip">/Users/kaschief/Documents/Compressed</span></div>
+        <div class="spec-row"><span style="width:110px">Proposed: icon</span><span class="tip">Show in Finder</span></div>
+        <div class="spec-row"><span style="width:110px">Proposed: disabled</span><span class="tip">Not used while replacing originals</span></div>
+        <div class="spec-row dark" style="background:#17162b;padding:12px;border-radius:10px;color:#9e9cc1"><span style="width:98px">Dark</span><span class="tip">/Users/kaschief/Documents/Compressed</span></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="verdict">
+    <h3>Side by side</h3>
+    <table>
+      <tr><th></th><th>Settings always visible</th><th>Extra height vs. original</th><th>Clicks to change</th><th>Replace is obvious</th><th>Feels like</th></tr>
+      <tr><td>A · Setting tiles</td><td>All three, in words</td><td>+54 pt</td><td>2 (tile → card)</td><td>Warm tile + row text</td><td>Geminio settings, condensed</td></tr>
+      <tr><td>B · One line, one panel</td><td>All three, one compact line</td><td>None</td><td>2 (summary → choice)</td><td>Warm dot + row text</td><td>The original app, grown up</td></tr>
+      <tr><td>C · Finder path bar</td><td>All three</td><td>+40 pt</td><td>1 (switch / slider), 2 (folder)</td><td>Warning in the path slot</td><td>Finder</td></tr>
+      <tr><td>D · Plan sentence</td><td>Destination + originals; quality in the footer</td><td>+48 pt</td><td>1 (quality), 2 (menus)</td><td>Whole banner turns warm</td><td>Budget’s message bar</td></tr>
+    </table>
+  </div>
+</main>
+</body>
+</html>
