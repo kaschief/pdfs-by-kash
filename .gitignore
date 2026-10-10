@@ -33,3 +33,6 @@ setup.py
 
 # Local release operations (contains account and Keychain metadata, never secrets)
 PRIVATE_RELEASE_NOTES.md
+
+# Branch worktrees (icon and design explorations) live inside the repo
+.worktrees/
