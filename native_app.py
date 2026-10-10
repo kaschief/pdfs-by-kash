@@ -18,6 +18,7 @@ from PyObjCTools import AppHelper
 
 from fs_pdf_compressor.batch import BatchSummary
 from fs_pdf_compressor.compression_queue import (
+    IN_FLIGHT_STATES,
     CompressionQueue,
     Compressed,
     Compressing,
@@ -44,7 +45,14 @@ from fs_pdf_compressor.macos_login_item import (
     set_enabled as set_login_item_enabled,
 )
 from fs_pdf_compressor.macos_update_probe import probe_for_update
-from fs_pdf_compressor.macos_views import DropCanvas, QueueTableController
+from fs_pdf_compressor.macos_views import (
+    DropCanvas,
+    OptionCard,
+    QueueTableController,
+    SelectionBar,
+    SettingTile,
+    option_popover,
+)
 from fs_pdf_compressor.version import APP_VERSION
 
 UPSTREAM_NAME = "FS PDF Compressor"
@@ -56,10 +64,6 @@ SPARKLE_PROBE_LAST_CHECK_KEY = "SparkleLightweightProbeLastCheck"
 SPARKLE_PROBE_INTERVAL = 86_400.0
 SPARKLE_PROBE_TIMEOUT = 5.0
 
-TAG_ALONGSIDE = 0
-TAG_FOLDER = 1
-TAG_CHOOSE = 2
-TAG_IN_PLACE = 3
 
 
 def load_sparkle_updater(start: bool = True):
@@ -81,10 +85,11 @@ def load_sparkle_updater(start: bool = True):
 
 
 class PDFCompressorController(FN.NSObject):
-    """Main window: queue PDFs, review settings, then compress on request."""
+    """Main window: add PDFs, review settings, then compress on request."""
 
     FOOTER_HEIGHT = 52.0
-    SETTINGS_HEIGHT = 40.0
+    TILES_HEIGHT = 56.0  # 44 pt tiles + 12 pt top padding
+    COMPRESS_WIDTH = 128.0
 
     def init(self):
         self = objc.super(PDFCompressorController, self).init()
@@ -95,6 +100,7 @@ class PDFCompressorController(FN.NSObject):
         self.batch_done = 0
         self.processing = False
         self.drop_zone = None
+        self.popover = None
         self.apply_saved_defaults()
         self._build_window()
         self.refresh()
@@ -125,7 +131,7 @@ class PDFCompressorController(FN.NSObject):
 
     @objc.python_method
     def bottom_chrome_height(self):
-        return self.FOOTER_HEIGHT + self.SETTINGS_HEIGHT
+        return self.FOOTER_HEIGHT + self.TILES_HEIGHT
 
     @objc.python_method
     def effective_output_dir(self):
@@ -141,14 +147,19 @@ class PDFCompressorController(FN.NSObject):
     def can_remove(self, row):
         if row < 0 or row >= len(self.queue):
             return False
-        item = self.queue[row]
-        if isinstance(item.state, Compressing):
-            return False
-        # Rows waiting in the running batch stay put so the worker's list holds.
-        return not (self.processing and item.path in self.batch_paths)
+        return not isinstance(self.queue[row].state, IN_FLIGHT_STATES)
+
+    @objc.python_method
+    def can_select(self, row):
+        return self.can_remove(row)
+
+    @objc.python_method
+    def selection_active(self):
+        return self.table_controller.table.numberOfSelectedRows() > 0
 
     # -- Window ---------------------------------------------------------------------
 
+    @objc.python_method
     def _build_window(self):
         style = (
             AK.NSWindowStyleMaskTitled
@@ -157,17 +168,15 @@ class PDFCompressorController(FN.NSObject):
             | AK.NSWindowStyleMaskResizable
         )
         self.window = AK.NSWindow.alloc().initWithContentRect_styleMask_backing_defer_(
-            AK.NSMakeRect(0, 0, 720, 440), style, AK.NSBackingStoreBuffered, False
+            AK.NSMakeRect(0, 0, 720, 460), style, AK.NSBackingStoreBuffered, False
         )
         self.window.setTitle_(APP_NAME)
-        self.window.setMinSize_(AK.NSMakeSize(660, 380))
+        self.window.setMinSize_(AK.NSMakeSize(660, 400))
         self.window.setReleasedWhenClosed_(False)
-        self.window.setDelegate_(self)
-        self.window.setFrameAutosaveName_("Pdfs by Kash Main Window")
         self.window.center()
 
         self.canvas = DropCanvas.alloc().initWithFrame_controller_(
-            AK.NSMakeRect(0, 0, 720, 440), self
+            AK.NSMakeRect(0, 0, 720, 460), self
         )
         self.window.setContentView_(self.canvas)
 
@@ -180,194 +189,128 @@ class PDFCompressorController(FN.NSObject):
         self.results_scroll.setDocumentView_(self.table_controller.table)
         self.canvas.addSubview_(self.results_scroll)
 
-        self._build_settings_bar()
-        self._build_footer()
+        self.selection_bar = SelectionBar.alloc().initWithOwner_(self)
+        self.selection_bar.setHidden_(True)
+        self.canvas.addSubview_(self.selection_bar)
+
+        self._build_bottom()
         self.layout_controls()
+        # Only now: restoring the saved frame triggers windowDidResize_, which
+        # needs every view above to exist.
+        self.window.setDelegate_(self)
+        self.window.setFrameAutosaveName_("Pdfs by Kash Main Window")
 
     @objc.python_method
-    def _small_label(self, text):
-        label = AK.NSTextField.labelWithString_(text)
-        label.setFont_(AK.NSFont.systemFontOfSize_(12.0))
-        label.setTextColor_(AK.NSColor.secondaryLabelColor())
-        return label
-
-    @objc.python_method
-    def _build_settings_bar(self):
-        self.settings_bar = AK.NSVisualEffectView.alloc().initWithFrame_(AK.NSZeroRect)
-        self.settings_bar.setMaterial_(AK.NSVisualEffectMaterialUnderWindowBackground)
-        self.settings_bar.setBlendingMode_(AK.NSVisualEffectBlendingModeWithinWindow)
-        self.canvas.addSubview_(self.settings_bar)
-
-        self.settings_separator = AK.NSBox.alloc().initWithFrame_(AK.NSZeroRect)
-        self.settings_separator.setBoxType_(AK.NSBoxSeparator)
-        self.settings_bar.addSubview_(self.settings_separator)
-
-        self.destination_popup = AK.NSPopUpButton.alloc().initWithFrame_pullsDown_(
-            AK.NSZeroRect, False
-        )
-        self.destination_popup.setControlSize_(AK.NSControlSizeSmall)
-        self.destination_popup.setFont_(AK.NSFont.systemFontOfSize_(12.0))
-        self.destination_popup.setTarget_(self)
-        self.destination_popup.setAction_("selectDestination:")
-        self.destination_popup.cell().setLineBreakMode_(AK.NSLineBreakByTruncatingMiddle)
-        self.destination_popup.setAccessibilityLabel_("Save compressed PDFs to")
-
-        self.originals_control = AK.NSSegmentedControl.segmentedControlWithLabels_trackingMode_target_action_(
-            ["Keep", "Replace"],
-            AK.NSSegmentSwitchTrackingSelectOne,
-            self,
-            "selectOriginalsMode:",
-        )
-        self.originals_control.setControlSize_(AK.NSControlSizeSmall)
-        self.originals_control.setFont_(AK.NSFont.systemFontOfSize_(12.0))
-        self.originals_control.setToolTip_forSegment_(
-            "Keep the original PDFs untouched and save compressed copies.", 0
-        )
-        self.originals_control.setToolTip_forSegment_(
-            "Overwrite each original with its compressed version once the new file is "
-            "verified. The previous version goes to the Trash.",
-            1,
-        )
-        self.originals_control.setAccessibilityLabel_("Original files")
-
-        self.quality_popup = AK.NSPopUpButton.alloc().initWithFrame_pullsDown_(
-            AK.NSZeroRect, False
-        )
-        self.quality_popup.setControlSize_(AK.NSControlSizeSmall)
-        self.quality_popup.setFont_(AK.NSFont.systemFontOfSize_(12.0))
-        for index, (label, _, description) in enumerate(QUALITY_PROFILES):
-            self.quality_popup.addItemWithTitle_(QUALITY_CONTROL_LABELS[index])
-            item = self.quality_popup.lastItem()
-            item.setToolTip_(f"{label} — {description}")
-            item.setTag_(index)
-        self.quality_popup.setTarget_(self)
-        self.quality_popup.setAction_("selectQuality:")
-        self.quality_popup.setAccessibilityLabel_("Compression quality")
-
-        self.save_label = self._small_label("Save to")
-        self.originals_label = self._small_label("Originals")
-        self.quality_label = self._small_label("Quality")
-
-        self.settings_stack = AK.NSStackView.stackViewWithViews_(
-            [
-                self.save_label,
-                self.destination_popup,
-                self.originals_label,
-                self.originals_control,
-                self.quality_label,
-                self.quality_popup,
-            ]
-        )
-        self.settings_stack.setSpacing_(6)
-        self.settings_stack.setCustomSpacing_afterView_(18, self.destination_popup)
-        self.settings_stack.setCustomSpacing_afterView_(18, self.originals_control)
-        self.settings_stack.setAlignment_(AK.NSLayoutAttributeCenterY)
-        self.destination_popup.setContentCompressionResistancePriority_forOrientation_(
-            AK.NSLayoutPriorityDefaultLow, AK.NSLayoutConstraintOrientationHorizontal
-        )
-        self.destination_popup.setContentHuggingPriority_forOrientation_(
-            AK.NSLayoutPriorityDefaultLow, AK.NSLayoutConstraintOrientationHorizontal
-        )
-        self.settings_bar.addSubview_(self.settings_stack)
-        # Long folder paths truncate in the middle instead of pushing the
-        # Originals/Quality controls out of the window; hover shows the full path.
-        self.destination_popup.widthAnchor().constraintLessThanOrEqualToConstant_(250).setActive_(True)
-
-    @objc.python_method
-    def _build_footer(self):
-        self.footer = AK.NSVisualEffectView.alloc().initWithFrame_(AK.NSZeroRect)
-        self.footer.setMaterial_(AK.NSVisualEffectMaterialUnderWindowBackground)
-        self.footer.setBlendingMode_(AK.NSVisualEffectBlendingModeWithinWindow)
-        self.footer.setState_(AK.NSVisualEffectStateFollowsWindowActiveState)
-        self.canvas.addSubview_(self.footer)
+    def _build_bottom(self):
+        self.bottom = AK.NSVisualEffectView.alloc().initWithFrame_(AK.NSZeroRect)
+        self.bottom.setMaterial_(AK.NSVisualEffectMaterialUnderWindowBackground)
+        self.bottom.setBlendingMode_(AK.NSVisualEffectBlendingModeWithinWindow)
+        self.bottom.setState_(AK.NSVisualEffectStateFollowsWindowActiveState)
+        self.canvas.addSubview_(self.bottom)
 
         self.separator = AK.NSBox.alloc().initWithFrame_(AK.NSZeroRect)
         self.separator.setBoxType_(AK.NSBoxSeparator)
-        self.footer.addSubview_(self.separator)
+        self.bottom.addSubview_(self.separator)
+
+        self.destination_tile = SettingTile.alloc().initWithKind_caption_symbol_owner_(
+            "destination", "Save to", "folder", self
+        )
+        self.originals_tile = SettingTile.alloc().initWithKind_caption_symbol_owner_(
+            "originals", "Originals", "square.on.square", self
+        )
+        self.quality_tile = SettingTile.alloc().initWithKind_caption_symbol_owner_(
+            "quality", "Quality", "circle.lefthalf.filled", self
+        )
+        for tile in self.tiles:
+            self.bottom.addSubview_(tile)
 
         self.add_button = AK.NSButton.alloc().initWithFrame_(AK.NSZeroRect)
         self.add_button.setBezelStyle_(AK.NSBezelStyleRounded)
         self.add_button.setImage_(
-            AK.NSImage.imageWithSystemSymbolName_accessibilityDescription_(
-                "plus", "Add PDFs"
-            )
+            AK.NSImage.imageWithSystemSymbolName_accessibilityDescription_("plus", "Add PDFs")
         )
         self.add_button.setImagePosition_(AK.NSImageOnly)
-        self.add_button.setToolTip_("Add PDFs or folders to the list (⌘O)")
+        self.add_button.setToolTip_("Add PDFs")  # icon-only: the one place a label helps
         self.add_button.setTarget_(self)
         self.add_button.setAction_("chooseFiles:")
-        self.footer.addSubview_(self.add_button)
+        self.bottom.addSubview_(self.add_button)
 
         self.status_label = AK.NSTextField.labelWithString_("")
-        self.status_label.setFont_(AK.NSFont.systemFontOfSize_(12.0))
+        self.status_label.setFont_(AK.NSFont.systemFontOfSize_(12.5))
+        self.status_label.setTextColor_(AK.NSColor.secondaryLabelColor())
         self.status_label.setLineBreakMode_(AK.NSLineBreakByTruncatingTail)
-        self.footer.addSubview_(self.status_label)
+        self.bottom.addSubview_(self.status_label)
 
         self.progress = AK.NSProgressIndicator.alloc().initWithFrame_(AK.NSZeroRect)
         self.progress.setStyle_(AK.NSProgressIndicatorStyleBar)
+        self.progress.setControlSize_(AK.NSControlSizeSmall)
         self.progress.setIndeterminate_(False)
         self.progress.setMinValue_(0)
         self.progress.setMaxValue_(100)
-        self.progress.setHidden_(True)
-        self.footer.addSubview_(self.progress)
+        self.bottom.addSubview_(self.progress)
 
-        self.clear_button = AK.NSButton.buttonWithTitle_target_action_(
-            "Clear", self, "clearList:"
-        )
-        self.clear_button.setBezelStyle_(AK.NSBezelStyleRounded)
-        self.clear_button.setToolTip_("Remove all files from the list (files on disk are not touched)")
-        self.footer.addSubview_(self.clear_button)
+        self.clear_button = AK.NSButton.buttonWithTitle_target_action_("Clear", self, "clearList:")
+        self.clear_button.setBordered_(False)
+        self.clear_button.setContentTintColor_(AK.NSColor.secondaryLabelColor())
+        self.bottom.addSubview_(self.clear_button)
 
-        self.compress_button = AK.NSButton.buttonWithTitle_target_action_(
-            "Compress", self, "compress:"
-        )
+        self.compress_button = AK.NSButton.buttonWithTitle_target_action_("Compress", self, "compress:")
         self.compress_button.setBezelStyle_(AK.NSBezelStyleRounded)
         self.compress_button.setKeyEquivalent_("\r")
-        self.footer.addSubview_(self.compress_button)
+        self.bottom.addSubview_(self.compress_button)
+
+    @property
+    def tiles(self):
+        return (self.destination_tile, self.originals_tile, self.quality_tile)
 
     def layout_controls(self):
         bounds = self.canvas.bounds()
-        width = bounds.size.width
-        height = bounds.size.height
-        footer_height = self.FOOTER_HEIGHT
-        settings_height = self.SETTINGS_HEIGHT
-        bottom = footer_height + settings_height
+        width, height = bounds.size.width, bounds.size.height
+        bottom_height = self.bottom_chrome_height()
+        footer = self.FOOTER_HEIGHT
 
-        self.footer.setFrame_(AK.NSMakeRect(0, 0, width, footer_height))
-        self.separator.setFrame_(AK.NSMakeRect(0, footer_height - 1, width, 1))
-        self.settings_bar.setFrame_(AK.NSMakeRect(0, footer_height, width, settings_height))
-        self.settings_separator.setFrame_(AK.NSMakeRect(0, settings_height - 1, width, 1))
-        stack_width = width - 28
-        self.settings_stack.setFrame_(
-            AK.NSMakeRect(14, (settings_height - 24) / 2, stack_width, 24)
+        self.bottom.setFrame_(AK.NSMakeRect(0, 0, width, bottom_height))
+        self.separator.setFrame_(AK.NSMakeRect(0, bottom_height - 1, width, 1))
+        self.results_scroll.setFrame_(
+            AK.NSMakeRect(0, bottom_height, width, height - bottom_height)
         )
-        self.results_scroll.setFrame_(AK.NSMakeRect(0, bottom, width, height - bottom))
 
-        control_y = (footer_height - 28) / 2
+        # Tiles: fixed proportions of the window, never of their text.
+        inner = width - 28
+        gap = 8.0
+        unit = (inner - 2 * gap) / 3.35
+        widths = (unit * 1.35, unit, unit)
+        x = 14.0
+        for tile, tile_width in zip(self.tiles, widths):
+            tile.setFrame_(AK.NSMakeRect(x, footer, tile_width, 44))
+            x += tile_width + gap
+
+        control_y = (footer - 28) / 2
         self.add_button.setFrame_(AK.NSMakeRect(14, control_y, 34, 28))
-
         right = width - 14
-        self.compress_button.sizeToFit()
-        compress_width = max(104, self.compress_button.frame().size.width + 12)
         self.compress_button.setFrame_(
-            AK.NSMakeRect(right - compress_width, control_y, compress_width, 28)
+            AK.NSMakeRect(right - self.COMPRESS_WIDTH, control_y, self.COMPRESS_WIDTH, 28)
         )
-        right -= compress_width + 8
-        if not self.clear_button.isHidden():
-            self.clear_button.setFrame_(AK.NSMakeRect(right - 70, control_y, 70, 28))
-            right -= 78
-        if not self.progress.isHidden():
-            self.progress.setFrame_(
-                AK.NSMakeRect(right - 120, (footer_height - 4) / 2, 120, 4)
-            )
-            right -= 130
-
-        label_x = 58
-        label_y = (footer_height - 20) / 2 - 2
+        right -= self.COMPRESS_WIDTH + 6
+        # Clear and the progress bar share one fixed slot, so the status text
+        # never changes width between idle and compressing.
+        slot = 120.0
+        self.clear_button.setFrame_(AK.NSMakeRect(right - 60, control_y, 60, 28))
+        self.progress.setFrame_(AK.NSMakeRect(right - slot + 6, (footer - 6) / 2, slot - 12, 6))
+        right -= slot + 4
         self.status_label.setFrame_(
-            AK.NSMakeRect(label_x, label_y, max(90, right - label_x), 20)
+            AK.NSMakeRect(58, (footer - 20) / 2 - 1, max(90, right - 58), 20)
         )
+        self._place_selection_bar()
         self.canvas.setNeedsDisplay_(True)
+
+    @objc.python_method
+    def _place_selection_bar(self):
+        size = self.selection_bar.frame().size
+        width = self.canvas.bounds().size.width
+        self.selection_bar.setFrameOrigin_(
+            AK.NSMakePoint((width - size.width) / 2, self.bottom_chrome_height() + 12)
+        )
 
     def windowDidResize_(self, notification):
         self.layout_controls()
@@ -376,74 +319,190 @@ class PDFCompressorController(FN.NSObject):
 
     @objc.python_method
     def refresh(self):
-        self._refresh_destination_popup()
-        self.originals_control.setSelectedSegment_(0 if self.keep_originals else 1)
-        self.quality_popup.selectItemWithTag_(self.quality_index)
-
         idle = not self.processing
-        for control in (self.destination_popup, self.originals_control, self.quality_popup):
-            control.setEnabled_(idle)
-        self.destination_popup.setEnabled_(idle and self.keep_originals)
+        self._refresh_tiles(idle)
 
-        has_pending = self.queue.has_pending
-        again = not has_pending and self.queue.has_finished
+        has_ready = self.queue.has_ready
+        again = not has_ready and self.queue.has_finished
         self.compress_button.setTitle_("Compress Again" if again else "Compress")
-        self.compress_button.setEnabled_(idle and (has_pending or again))
-        self.compress_button.setToolTip_(
-            "Compress the finished files again with the current settings"
-            if again
-            else "Compress every pending file in the list (Return)"
-        )
-        self.clear_button.setHidden_(not (idle and len(self.queue) > 0))
+        self.compress_button.setEnabled_(idle and (has_ready or again))
+        self.clear_button.setHidden_(not idle or len(self.queue) == 0)
         self.progress.setHidden_(idle)
 
+        self.results_scroll.setHidden_(not self.showing_results)
+        self.table_controller.reload()
+        self.selection_changed()
+        self.layout_controls()
+
+    @objc.python_method
+    def _refresh_status(self):
         if self.processing:
             total = len(self.batch_paths)
             status = f"Compressing {min(self.batch_done + 1, total)} of {total}…"
         else:
             status = self.queue.summary_text()
+            ready = len(self.queue.ready_paths)
+            # Selection never limits what Compress does; say so while it exists.
+            if ready and self.table_controller.selected_rows():
+                status += f" · Compress includes all {ready}"
         self.status_label.setStringValue_(status)
-        self.status_label.setToolTip_(status)
-
-        self.results_scroll.setHidden_(not self.showing_results)
-        self.table_controller.reload()
-        self.layout_controls()
+        self.status_label.setToolTip_(status)  # the line can truncate when narrow
 
     @objc.python_method
-    def _refresh_destination_popup(self):
-        popup = self.destination_popup
-        popup.removeAllItems()
-        if not self.keep_originals:
-            popup.addItemWithTitle_("Original files (replaced in place)")
-            popup.lastItem().setTag_(TAG_IN_PLACE)
-            popup.setToolTip_(
-                "Each compressed PDF overwrites its original; the old version goes to the Trash."
-            )
-            return
-
-        popup.addItemWithTitle_("Same folder as each original")
-        popup.lastItem().setTag_(TAG_ALONGSIDE)
-        popup.lastItem().setToolTip_("Saved next to the original as “name compressed.pdf”.")
-        if self.output_folder:
-            popup.addItemWithTitle_(tilde_path(self.output_folder))
-            item = popup.lastItem()
-            item.setTag_(TAG_FOLDER)
-            item.setToolTip_(self.output_folder)
-            icon = AK.NSWorkspace.sharedWorkspace().iconForFile_(self.output_folder)
-            icon.setSize_(AK.NSMakeSize(16, 16))
-            item.setImage_(icon)
-        popup.menu().addItem_(AK.NSMenuItem.separatorItem())
-        popup.addItemWithTitle_("Choose Folder…")
-        popup.lastItem().setTag_(TAG_CHOOSE)
-
-        if self.use_output_folder and self.output_folder:
-            popup.selectItemWithTag_(TAG_FOLDER)
-            popup.setToolTip_(f"Compressed copies are saved in:\n{self.output_folder}")
+    def _refresh_tiles(self, idle):
+        if self.keep_originals:
+            if self.effective_output_dir():
+                self.destination_tile.update(
+                    Path(self.output_folder).name,
+                    tooltip=self.output_folder,
+                    symbol="folder.fill",
+                )
+            else:
+                self.destination_tile.update("Next to originals", symbol="folder")
+            self.originals_tile.update("Keep", symbol="square.on.square")
         else:
-            popup.selectItemWithTag_(TAG_ALONGSIDE)
-            popup.setToolTip_(
-                "Compressed copies are saved next to each original as “name compressed.pdf”."
+            self.destination_tile.update(
+                "In place of originals", mode="off", tooltip="Not used while replacing originals"
             )
+            self.originals_tile.update("Replace", mode="warn", symbol="arrow.triangle.2.circlepath")
+        self.quality_tile.update(QUALITY_CONTROL_LABELS[self.quality_index])
+        if not idle:
+            for tile in self.tiles:
+                tile.update(tile.value, mode="off", tooltip=None)
+
+    # -- Setting popovers ---------------------------------------------------------
+
+    @objc.python_method
+    def open_setting(self, tile):
+        if self.processing:
+            return
+        if self.popover is not None:
+            self.popover.close()
+        cards = getattr(self, f"_{tile.kind}_cards")()
+        self.popover = option_popover(cards, self)
+        tile.open = True
+        tile.setNeedsDisplay_(True)
+        self.popover_tile = tile
+        self.popover.showRelativeToRect_ofView_preferredEdge_(
+            tile.bounds(), tile, AK.NSRectEdgeMaxY
+        )
+
+    def popoverDidClose_(self, notification):
+        if getattr(self, "popover_tile", None) is not None:
+            self.popover_tile.open = False
+            self.popover_tile.setNeedsDisplay_(True)
+        self.popover = None
+
+    @objc.python_method
+    def _pick(self, apply):
+        def picked():
+            apply()
+            if self.popover is not None:
+                self.popover.close()
+            self.refresh()
+
+        return picked
+
+    @objc.python_method
+    def _originals_cards(self):
+        def keep():
+            self.keep_originals = True
+
+        def replace():
+            self.keep_originals = False
+
+        return [
+            OptionCard.alloc().initWithTitle_detail_symbol_selected_warn_action_(
+                "Keep originals",
+                "Saves a compressed copy. Your files are never touched.",
+                "square.on.square",
+                self.keep_originals,
+                False,
+                self._pick(keep),
+            ),
+            OptionCard.alloc().initWithTitle_detail_symbol_selected_warn_action_(
+                "Replace originals",
+                "Overwrites each file once its smaller version checks out. "
+                "Old versions go to the Trash.",
+                "arrow.triangle.2.circlepath",
+                not self.keep_originals,
+                True,
+                self._pick(replace),
+            ),
+        ]
+
+    @objc.python_method
+    def _quality_cards(self):
+        cards = []
+        for index, (label, _, description) in enumerate(QUALITY_PROFILES):
+
+            def choose(index=index):
+                self.quality_index = index
+
+            cards.append(
+                OptionCard.alloc().initWithTitle_detail_symbol_selected_warn_action_(
+                    QUALITY_CONTROL_LABELS[index],
+                    description,
+                    ("circle", "circle.lefthalf.filled", "circle.fill")[index],
+                    index == self.quality_index,
+                    False,
+                    self._pick(choose),
+                )
+            )
+        return cards
+
+    @objc.python_method
+    def _destination_cards(self):
+        def alongside():
+            self.use_output_folder = False
+
+        def folder():
+            self.use_output_folder = True
+
+        cards = [
+            OptionCard.alloc().initWithTitle_detail_symbol_selected_warn_action_(
+                "Next to each original",
+                "Saved beside the original as “name compressed.pdf”.",
+                "folder",
+                not self.effective_output_dir(),
+                False,
+                self._pick(alongside),
+            )
+        ]
+        if self.output_folder:
+            cards.append(
+                OptionCard.alloc().initWithTitle_detail_symbol_selected_warn_action_(
+                    Path(self.output_folder).name,
+                    tilde_path(self.output_folder),
+                    "folder.fill",
+                    bool(self.effective_output_dir()),
+                    False,
+                    self._pick(folder),
+                )
+            )
+        cards.append(
+            OptionCard.alloc().initWithTitle_detail_symbol_selected_warn_action_(
+                "Choose Folder…", None, "folder.badge.plus", False, False, self._choose_folder
+            )
+        )
+        return cards
+
+    @objc.python_method
+    def _choose_folder(self):
+        if self.popover is not None:
+            self.popover.close()
+        panel = AK.NSOpenPanel.openPanel()
+        panel.setCanChooseFiles_(False)
+        panel.setCanChooseDirectories_(True)
+        panel.setCanCreateDirectories_(True)
+        panel.setPrompt_("Save Here")
+        panel.setMessage_("Choose where compressed PDFs should be saved.")
+        if self.output_folder:
+            panel.setDirectoryURL_(FN.NSURL.fileURLWithPath_(self.output_folder))
+        if panel.runModal() == AK.NSModalResponseOK:
+            self.output_folder = str(panel.URL().path())
+            self.use_output_folder = True
+        self.refresh()
 
     # -- Adding files ------------------------------------------------------------------
 
@@ -452,7 +511,7 @@ class PDFCompressorController(FN.NSObject):
 
     @objc.python_method
     def add_paths(self, paths):
-        """Queue PDFs (folders are searched). Never starts compression."""
+        """Add PDFs (folders are searched) to the list. Never starts compression."""
         if not paths:
             return False
         self.status_label.setStringValue_("Finding PDFs…")
@@ -470,7 +529,6 @@ class PDFCompressorController(FN.NSObject):
 
     @objc.python_method
     def _discovery_finished(self, pdfs, failed):
-        # Never disturb rows that are part of the running batch.
         addable = [p for p in pdfs if not (self.processing and p in self.batch_paths)]
         added = self.queue.add(addable)
         self.refresh()
@@ -503,72 +561,109 @@ class PDFCompressorController(FN.NSObject):
         if panel.runModal() == AK.NSModalResponseOK:
             self.add_paths([str(url.path()) for url in panel.URLs()])
 
-    # -- Removing / revealing --------------------------------------------------------------
+    # -- Selection, removing, revealing ---------------------------------------------------
+
+    @objc.python_method
+    def selection_changed(self):
+        self._refresh_status()
+        rows = self.table_controller.selected_rows()
+        if not rows:
+            self.selection_bar.setHidden_(True)
+        else:
+            self.selection_bar.update(
+                len(rows),
+                can_reveal=True,
+                can_remove=any(self.can_remove(r) for r in rows),
+            )
+            self.selection_bar.setHidden_(False)
+            self._place_selection_bar()
+        # Checkbox circles show on every row while anything is selected.
+        table = self.table_controller.table
+        if table.numberOfRows():
+            table.reloadDataForRowIndexes_columnIndexes_(
+                FN.NSIndexSet.indexSetWithIndexesInRange_(FN.NSMakeRange(0, table.numberOfRows())),
+                FN.NSIndexSet.indexSetWithIndex_(0),
+            )
+
+    def revealSelection_(self, sender):
+        self.reveal_rows(self.table_controller.selected_rows())
+
+    def removeSelection_(self, sender):
+        self.remove_rows(self.table_controller.selected_rows())
+
+    def clearSelection_(self, sender):
+        self.table_controller.table.deselectAll_(None)
+
+    def showInFinder_(self, sender):
+        rows = self.table_controller.selected_rows()
+        if not rows:
+            row = self.table_controller.table.hovered_row
+            rows = [row] if row >= 0 else []
+        self.reveal_rows(rows)
 
     @objc.python_method
     def remove_rows(self, rows):
         if self.queue.remove(r for r in rows if self.can_remove(r)):
             self.table_controller.table.deselectAll_(None)
+            self.table_controller.table.hovered_row = -1
             self.refresh()
 
     def clearList_(self, sender):
         if self.processing:
             return
         self.queue.clear()
+        self.table_controller.table.deselectAll_(None)
         self.refresh()
 
     @objc.python_method
+    def _row_file(self, row):
+        """The file a row stands for: the compressed copy once it exists."""
+        item = self.queue[row]
+        if isinstance(item.state, Compressed) and os.path.exists(item.state.output_path):
+            return item.state.output_path
+        return item.path if os.path.exists(item.path) else None
+
+    @objc.python_method
     def reveal_rows(self, rows):
-        urls = []
-        for row in rows:
-            if 0 <= row < len(self.queue):
-                state = self.queue[row].state
-                if isinstance(state, Compressed) and os.path.exists(state.output_path):
-                    urls.append(FN.NSURL.fileURLWithPath_(state.output_path))
+        urls = [
+            FN.NSURL.fileURLWithPath_(path)
+            for path in (self._row_file(r) for r in rows if 0 <= r < len(self.queue))
+            if path
+        ]
         if urls:
             AK.NSWorkspace.sharedWorkspace().activateFileViewerSelectingURLs_(urls)
 
-    # -- Settings ----------------------------------------------------------------------
+    @objc.python_method
+    def open_rows(self, rows):
+        for row in rows:
+            if 0 <= row < len(self.queue):
+                path = self._row_file(row)
+                if path:
+                    AK.NSWorkspace.sharedWorkspace().openURL_(FN.NSURL.fileURLWithPath_(path))
 
-    def selectDestination_(self, sender):
-        tag = sender.selectedItem().tag()
-        if tag == TAG_CHOOSE:
-            panel = AK.NSOpenPanel.openPanel()
-            panel.setCanChooseFiles_(False)
-            panel.setCanChooseDirectories_(True)
-            panel.setCanCreateDirectories_(True)
-            panel.setPrompt_("Save Here")
-            panel.setMessage_("Choose where compressed PDFs should be saved.")
-            if self.output_folder:
-                panel.setDirectoryURL_(FN.NSURL.fileURLWithPath_(self.output_folder))
-            if panel.runModal() == AK.NSModalResponseOK:
-                self.output_folder = str(panel.URL().path())
-                self.use_output_folder = True
-        else:
-            self.use_output_folder = tag == TAG_FOLDER
-        self.refresh()
-
-    def selectOriginalsMode_(self, sender):
-        self.keep_originals = sender.selectedSegment() == 0
-        self.refresh()
-
-    def selectQuality_(self, sender):
-        self.quality_index = sender.selectedItem().tag()
+    @objc.python_method
+    def copy_paths(self, rows):
+        paths = [p for p in (self._row_file(r) for r in rows if 0 <= r < len(self.queue)) if p]
+        if paths:
+            board = AK.NSPasteboard.generalPasteboard()
+            board.clearContents()
+            board.setString_forType_("\n".join(paths), AK.NSPasteboardTypeString)
 
     # -- Compressing ---------------------------------------------------------------------
 
     def compress_(self, sender):
         if self.processing:
             return
-        if not self.queue.has_pending:
+        if not self.queue.has_ready:
             self.queue.requeue_finished()
-        paths = self.queue.pending_paths
-        if not paths:
+        if not self.queue.has_ready:
             self.refresh()
             return
-        if not self.keep_originals and not self._confirm_replace(len(paths)):
+        if not self.keep_originals and not self._confirm_replace(len(self.queue.ready_paths)):
             return
-        self.batch_paths = paths
+        if self.popover is not None:
+            self.popover.close()
+        self.batch_paths = self.queue.queue_ready()
         self.batch_done = 0
         self.processing = True
         self.progress.setDoubleValue_(0)
@@ -577,7 +672,7 @@ class PDFCompressorController(FN.NSObject):
         _, setting, _ = QUALITY_PROFILES[self.quality_index]
         threading.Thread(
             target=self._compress_worker,
-            args=(list(paths), setting, self.keep_originals, self.effective_output_dir()),
+            args=(list(self.batch_paths), setting, self.keep_originals, self.effective_output_dir()),
             daemon=True,
         ).start()
 
@@ -586,7 +681,7 @@ class PDFCompressorController(FN.NSObject):
         if prefs.skip_replace_confirmation():
             return True
         alert = AK.NSAlert.alloc().init()
-        noun = "PDF" if count == 1 else f"{count} PDFs"
+        noun = "this PDF" if count == 1 else f"{count} PDFs"
         alert.setMessageText_(f"Replace {noun} with compressed versions?")
         alert.setInformativeText_(
             "Each original is only replaced after its compressed version has been "
@@ -632,32 +727,22 @@ class PDFCompressorController(FN.NSObject):
     @objc.python_method
     def _finish_compression(self):
         self.processing = False
-        # Anything still marked Compressing (e.g. an unexpected worker crash) failed.
         for path in self.batch_paths:
             index = self.queue.index_of(path)
-            if index is not None and isinstance(self.queue[index].state, Compressing):
+            if index is not None and isinstance(self.queue[index].state, IN_FLIGHT_STATES):
                 self.queue.set_state(path, Failed("Compression was interrupted"))
         batch = set(self.batch_paths)
+        finished = [i for i in self.queue.items if i.path in batch and isinstance(i.state, Compressed)]
         metrics = [
-            {
-                "original_size": item.original_size,
-                "saved_size": item.original_size - item.state.new_size,
-            }
-            for item in self.queue.items
-            if item.path in batch and isinstance(item.state, Compressed)
+            {"original_size": i.original_size, "saved_size": i.original_size - i.state.new_size}
+            for i in finished
         ]
         self.batch_paths = []
         self.refresh()
-        if self.reveal_when_done:
-            outputs = [
-                item.state.output_path
-                for item in self.queue.items
-                if item.path in batch and isinstance(item.state, Compressed)
-            ]
-            if outputs:
-                AK.NSWorkspace.sharedWorkspace().activateFileViewerSelectingURLs_(
-                    [FN.NSURL.fileURLWithPath_(path) for path in outputs]
-                )
+        if self.reveal_when_done and finished:
+            AK.NSWorkspace.sharedWorkspace().activateFileViewerSelectingURLs_(
+                [FN.NSURL.fileURLWithPath_(i.state.output_path) for i in finished]
+            )
         if self.drop_zone is not None:
             self.drop_zone.batch_finished(BatchSummary.from_metrics(metrics))
 
@@ -860,6 +945,10 @@ class AppDelegate(FN.NSObject):
             "Compress", "compress:", "\r"
         )
         compress_item.setTarget_(self.controller)
+        reveal_item = file_menu.addItemWithTitle_action_keyEquivalent_(
+            "Show in Finder", "showInFinder:", "r"
+        )
+        reveal_item.setTarget_(self.controller)
         file_menu.addItem_(AK.NSMenuItem.separatorItem())
         clear_item = file_menu.addItemWithTitle_action_keyEquivalent_(
             "Clear List", "clearList:", ""
@@ -1015,6 +1104,9 @@ class AppDelegate(FN.NSObject):
 
 
 def main():
+    # Tooltips only carry secondary detail (full paths, icon-only buttons, why
+    # something is disabled), so they wait a beat instead of popping instantly.
+    FN.NSUserDefaults.standardUserDefaults().registerDefaults_({"NSInitialToolTipDelay": 700})
     application = AK.NSApplication.sharedApplication()
     application.setActivationPolicy_(AK.NSApplicationActivationPolicyRegular)
     delegate = AppDelegate.alloc().init()

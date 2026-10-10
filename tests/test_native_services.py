@@ -8,21 +8,21 @@ from pathlib import Path
 
 @unittest.skipUnless(sys.platform == "darwin", "macOS AppKit test")
 class FinderQuickActionTests(unittest.TestCase):
-    def test_originals_mode_in_main_window_is_session_only(self):
+    def test_originals_choice_in_main_window_is_session_only(self):
         import native_app
         from unittest import mock
 
-        sender = mock.Mock()
         controller = native_app.PDFCompressorController.alloc()
+        controller.keep_originals = True
+        controller.popover = None
         with (
             mock.patch.object(native_app.PDFCompressorController, "refresh"),
             mock.patch.object(native_app.prefs, "save_compression_defaults") as save,
         ):
-            sender.selectedSegment.return_value = 1
-            controller.selectOriginalsMode_(sender)
+            keep, replace = controller._originals_cards()
+            replace.action()
             self.assertFalse(controller.keep_originals)
-            sender.selectedSegment.return_value = 0
-            controller.selectOriginalsMode_(sender)
+            keep.action()
             self.assertTrue(controller.keep_originals)
             save.assert_not_called()
 

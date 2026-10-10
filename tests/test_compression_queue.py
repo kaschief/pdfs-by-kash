@@ -10,7 +10,8 @@ from fs_pdf_compressor.compression_queue import (
     Compressed,
     Compressing,
     Failed,
-    Pending,
+    Queued,
+    Ready,
     Unchanged,
     state_from_result,
 )
@@ -27,9 +28,9 @@ class QueueTests(unittest.TestCase):
         added = queue.add(["/a.pdf", "/b.pdf"], size_of=sizes({"/a.pdf": 10, "/b.pdf": 20}))
 
         self.assertEqual(added, 2)
-        self.assertTrue(all(isinstance(i.state, Pending) for i in queue.items))
+        self.assertTrue(all(isinstance(i.state, Ready) for i in queue.items))
         self.assertEqual([i.original_size for i in queue.items], [10, 20])
-        self.assertEqual(queue.pending_paths, ["/a.pdf", "/b.pdf"])
+        self.assertEqual(queue.ready_paths, ["/a.pdf", "/b.pdf"])
 
     def test_duplicates_are_ignored_but_finished_files_are_requeued(self):
         queue = CompressionQueue()
@@ -39,16 +40,26 @@ class QueueTests(unittest.TestCase):
 
         queue.set_state("/a.pdf", Compressed("/a compressed.pdf", 4))
         self.assertEqual(queue.add(["/a.pdf"], size_of=size_of), 1)
-        self.assertIsInstance(queue[0].state, Pending)
+        self.assertIsInstance(queue[0].state, Ready)
         self.assertEqual(len(queue), 1)
 
-    def test_rows_being_compressed_cannot_be_removed(self):
+    def test_rows_in_a_running_batch_cannot_be_removed(self):
+        queue = CompressionQueue()
+        queue.add(["/a.pdf", "/b.pdf", "/c.pdf"], size_of=lambda _: 1)
+        queue.set_state("/a.pdf", Compressing())
+        queue.set_state("/b.pdf", Queued())
+
+        self.assertEqual(queue.remove([0, 1, 2]), 1)
+        self.assertEqual([i.path for i in queue.items], ["/a.pdf", "/b.pdf"])
+
+    def test_compress_moves_ready_rows_to_queued(self):
         queue = CompressionQueue()
         queue.add(["/a.pdf", "/b.pdf"], size_of=lambda _: 1)
-        queue.set_state("/a.pdf", Compressing())
-
-        self.assertEqual(queue.remove([0, 1]), 1)
-        self.assertEqual([i.path for i in queue.items], ["/a.pdf"])
+        queue.set_state("/b.pdf", Compressed("/b2.pdf", 1))
+        self.assertEqual(queue.queue_ready(), ["/a.pdf"])
+        self.assertIsInstance(queue[0].state, Queued)
+        self.assertTrue(queue.is_running)
+        self.assertFalse(queue.has_ready)
 
     def test_clear_keeps_in_flight_rows(self):
         queue = CompressionQueue()
@@ -91,7 +102,7 @@ class QueueTests(unittest.TestCase):
             queue.set_state("/gone.pdf", Failed("x"))
 
             self.assertEqual(queue.requeue_finished(), 1)
-            self.assertIsInstance(queue[0].state, Pending)
+            self.assertIsInstance(queue[0].state, Ready)
             self.assertIsInstance(queue[1].state, Failed)
 
 
