@@ -2,7 +2,7 @@
 
 <img src="assets/app-icons/squish.png" alt="Pdfs by Kash" width="96" />
 
-# Pdfs by Kash
+# pdfs • by kash
 
 **Kash's PDF compressor. Add, review, compress — on your Mac, nothing uploaded.**
 
